@@ -1,9 +1,9 @@
-package main
+package app
 
 import (
 	"context"
+	"fmt"
 	grpcapi "github.com/HSE-RDBMS-course-work/kvstore/internal/api/grpc"
-	"github.com/HSE-RDBMS-course-work/kvstore/internal/core"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
@@ -12,36 +12,23 @@ import (
 	"log"
 	"log/slog"
 	"net"
-	"os"
-	"os/signal"
 )
 
-//todo package for getters with no "Get"
+type GRPCServerConfig struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+}
 
-type SlogWrapper struct {
+type slogWrapper struct {
 	log *slog.Logger
 }
 
-func (sw *SlogWrapper) Log(ctx context.Context, level logging.Level, msg string, fields ...any) {
+func (sw *slogWrapper) Log(ctx context.Context, level logging.Level, msg string, fields ...any) {
 	sw.log.Log(ctx, slog.Level(level), msg, fields)
 }
 
-func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     slog.LevelInfo,
-		AddSource: true,
-	})
-
-	logger := slog.New(handler)
-
-	store := core.NewStore()
-
-	api := grpcapi.NewServer(store)
-
-	recoveryFunc := func(p any) (err error) {
+func StartGRPCServer(cfg *GRPCServerConfig, api *grpcapi.Server, logger *slog.Logger) *grpc.Server {
+	recoveryFunc := func(p any) (err error) { //todo use slog with context
 		log.Printf("panic: %v", p)
 		return status.Error(codes.Internal, "internal server error")
 	}
@@ -51,7 +38,7 @@ func main() {
 	)
 
 	loggingMW := logging.UnaryServerInterceptor(
-		&SlogWrapper{
+		&slogWrapper{
 			log: logger,
 		},
 	)
@@ -65,7 +52,9 @@ func main() {
 
 	api.RegisterTo(server)
 
-	listener, err := net.Listen("tcp", "localhost:8080")
+	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
+
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("cannot listen: %s", err)
 	}
@@ -76,7 +65,5 @@ func main() {
 		}
 	}()
 
-	<-ctx.Done()
-
-	server.GracefulStop()
+	return server
 }

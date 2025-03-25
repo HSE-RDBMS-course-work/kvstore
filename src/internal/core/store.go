@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"maps"
 	"sync"
 )
 
@@ -15,11 +16,21 @@ type Store struct {
 	mu *sync.RWMutex
 }
 
+type Command struct {
+	Op    string `json:"op"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 func NewStore() *Store {
 	return &Store{
 		mp: make(map[string]string),
 		mu: new(sync.RWMutex),
 	}
+}
+
+func (s *Store) Map(ctx context.Context) (map[string]string, error) {
+	return maps.Clone(s.mp), nil
 }
 
 func (s *Store) Get(ctx context.Context, key string) (string, error) {

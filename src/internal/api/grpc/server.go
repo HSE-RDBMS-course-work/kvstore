@@ -15,7 +15,7 @@ var (
 	empty = &emptypb.Empty{}
 )
 
-type KVStore interface {
+type kvstore interface {
 	Get(ctx context.Context, key string) (string, error)
 	Put(ctx context.Context, key, value string) error
 	Delete(ctx context.Context, key string) error
@@ -23,10 +23,10 @@ type KVStore interface {
 
 type Server struct {
 	pb.UnimplementedKVStoreServer
-	store KVStore
+	store kvstore
 }
 
-func NewServer(store KVStore) *Server {
+func NewServer(store kvstore) *Server {
 	return &Server{
 		store: store,
 	}

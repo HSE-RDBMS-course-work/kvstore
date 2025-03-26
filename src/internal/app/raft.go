@@ -1,27 +1,28 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	pb "github.com/HSE-RDBMS-course-work/kvstore-proto/gen/go"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"net"
 	"os"
 	"time"
 )
 
-type Node struct {
-	Address string `yaml:"address"`
-	ID      string `yaml:"id"`
-}
-
 type RaftConfig struct {
 	Host             string `yaml:"host"`
+	Advertise        string `yaml:"advertise"`
 	Port             string `yaml:"port"`
 	LocalID          string `yaml:"local_id"`
 	LogLocation      string `yaml:"log_location"`
 	StableLocation   string `yaml:"stable_location"`
 	SnapshotLocation string `yaml:"snapshot_location"`
-	Nodes            []Node `yaml:"nodes"`
+	LeaderAddr       string `yaml:"leader_address"`
 }
 
 func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
@@ -43,10 +44,15 @@ func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
 		log.Fatalf("cannot create snapshot store: %v", err)
 	}
 
-	nodeAddr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
+	localAddr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 
-	//todo first is internal nodeAddr second is public nodeAddr
-	transport, err := raft.NewTCPTransport(nodeAddr, nil, 3, 10*time.Second, os.Stderr)
+	//todo
+	advertisedAddr, err := net.ResolveTCPAddr("tcp", cfg.Advertise)
+	if err != nil {
+		log.Fatalf("cannot resolve advertised address: %v", err)
+	}
+
+	transport, err := raft.NewTCPTransport(localAddr, advertisedAddr, 3, 10*time.Second, os.Stderr)
 	if err != nil {
 		log.Fatalf("cannot create transport: %v", err)
 	}
@@ -56,27 +62,55 @@ func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
 		log.Fatalf("cannot create raft node: %v", err)
 	}
 
-	nodes := make([]raft.Server, len(cfg.Nodes)+1)
-
-	for i, node := range cfg.Nodes {
-		nodes[i] = raft.Server{
-			ID:      raft.ServerID(node.ID),
-			Address: raft.ServerAddress(node.Address),
+	if cfg.LeaderAddr == "" {
+		bootstrap(node, cfg.LocalID, localAddr)
+	} else {
+		if err := join(cfg.LeaderAddr, cfg.LocalID, cfg.Advertise); err != nil {
+			log.Print(err) //todo
 		}
 	}
 
-	nodes = append(nodes, raft.Server{ //appending local node
-		ID:      raft.ServerID(cfg.LocalID),
-		Address: raft.ServerAddress(nodeAddr),
-	})
+	return node
+}
 
+func bootstrap(leader *raft.Raft, id string, addr string) {
 	configuration := raft.Configuration{
-		Servers: nodes,
+		Servers: []raft.Server{
+			{
+				ID:      raft.ServerID(id),
+				Address: raft.ServerAddress(addr),
+			},
+		},
 	}
 
 	go func() {
-		node.BootstrapCluster(configuration)
+		leader.BootstrapCluster(configuration)
 	}()
+}
 
-	return node
+func join(leaderAddr, id, addr string) error {
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()), //todo
+	}
+
+	conn, err := grpc.NewClient(leaderAddr, opts...)
+	if err != nil {
+		return err
+	}
+
+	client := pb.NewRaftClient(conn)
+
+	in := pb.JoinIn{
+		NodeAddr: addr,
+		NodeID:   id,
+	}
+
+	log.Printf("send join request: %+v\n", &in)
+
+	_, err = client.Join(context.TODO(), &in)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

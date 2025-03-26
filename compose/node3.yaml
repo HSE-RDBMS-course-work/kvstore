@@ -1,12 +1,13 @@
-raft:
+grpc_server:
   host: "0.0.0.0"
   port: "8080"
+
+raft:
+  host: "0.0.0.0"
+  port: "3000"
+  advertise: "node3:3000"
   local_id: "node3"
   log_location: "raft-log.db"
   stable_location: "raft-stable.db"
   snapshot_location: "."
-  nodes:
-    - local_id: "node1"
-      address: "node1:8080"
-    - local_id: "node2"
-      address: "node2:8080"
+  leader_address: "node1:8080"

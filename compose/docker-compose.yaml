@@ -13,6 +13,8 @@ services:
       - ./node2.yaml:/home/appuser/app/config.yaml
     ports:
       - "8082:8080"
+    depends_on:
+      - node1
   node3:
     container_name: node3
     build: ../
@@ -20,3 +22,5 @@ services:
       - ./node3.yaml:/home/appuser/app/config.yaml
     ports:
       - "8083:8080"
+    depends_on:
+      - node1

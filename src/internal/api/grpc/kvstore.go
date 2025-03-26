@@ -4,15 +4,11 @@ import (
 	"context"
 	"errors"
 	pb "github.com/HSE-RDBMS-course-work/kvstore-proto/gen/go"
-	"github.com/HSE-RDBMS-course-work/kvstore/internal/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-)
-
-var (
-	empty = &emptypb.Empty{}
+	"kvstore/internal/core"
 )
 
 type kvstore interface {
@@ -21,22 +17,22 @@ type kvstore interface {
 	Delete(ctx context.Context, key string) error
 }
 
-type Server struct {
+type KVStoreServer struct {
 	pb.UnimplementedKVStoreServer
 	store kvstore
 }
 
-func NewServer(store kvstore) *Server {
-	return &Server{
+func NewKVStoreServer(store kvstore) *KVStoreServer {
+	return &KVStoreServer{
 		store: store,
 	}
 }
 
-func (s *Server) RegisterTo(server *grpc.Server) {
+func (s *KVStoreServer) RegisterTo(server *grpc.Server) {
 	pb.RegisterKVStoreServer(server, s)
 }
 
-func (s *Server) Get(ctx context.Context, in *pb.GetIn) (*pb.GetOut, error) {
+func (s *KVStoreServer) Get(ctx context.Context, in *pb.GetIn) (*pb.GetOut, error) {
 	key := in.GetKey()
 
 	value, err := s.store.Get(ctx, key)
@@ -54,7 +50,7 @@ func (s *Server) Get(ctx context.Context, in *pb.GetIn) (*pb.GetOut, error) {
 	return &out, nil
 }
 
-func (s *Server) Put(ctx context.Context, in *pb.PutIn) (*emptypb.Empty, error) {
+func (s *KVStoreServer) Put(ctx context.Context, in *pb.PutIn) (*emptypb.Empty, error) {
 	key := in.GetKey()
 	value := in.GetValue()
 
@@ -66,7 +62,7 @@ func (s *Server) Put(ctx context.Context, in *pb.PutIn) (*emptypb.Empty, error) 
 	return empty, nil
 }
 
-func (s *Server) Delete(ctx context.Context, in *pb.DeleteIn) (*emptypb.Empty, error) {
+func (s *KVStoreServer) Delete(ctx context.Context, in *pb.DeleteIn) (*emptypb.Empty, error) {
 	key := in.GetKey()
 
 	err := s.store.Delete(ctx, key)

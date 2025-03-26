@@ -29,7 +29,7 @@ func NewStore() *Store {
 	}
 }
 
-func (s *Store) Map(ctx context.Context) (map[string]string, error) {
+func (s *Store) Data(ctx context.Context) (map[string]string, error) {
 	return maps.Clone(s.mp), nil
 }
 

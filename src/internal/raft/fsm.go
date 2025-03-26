@@ -1,4 +1,4 @@
-package fsm
+package raft
 
 import (
 	"context"
@@ -12,18 +12,6 @@ var (
 	ErrUnknownCmd = errors.New("error unknown command")
 )
 
-type Command struct {
-	Op    string `json:"op"`
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type kvstore interface {
-	Map(ctx context.Context) (map[string]string, error)
-	Put(ctx context.Context, key, value string) error
-	Delete(ctx context.Context, key string) error
-}
-
 type FSM struct {
 	store kvstore
 }
@@ -35,16 +23,16 @@ func NewFSM(store kvstore) *FSM {
 }
 
 func (fsm *FSM) Apply(log *raft.Log) any {
-	var cmd Command
+	var cmd command
 	if err := json.Unmarshal(log.Data, &cmd); err != nil {
 		return err
 	}
 
 	var err error
 	switch cmd.Op {
-	case "put":
+	case opPut:
 		err = fsm.store.Put(context.Background(), cmd.Key, cmd.Value)
-	case "delete":
+	case opDelete:
 		err = fsm.store.Delete(context.Background(), cmd.Key)
 	default:
 		err = ErrUnknownCmd
@@ -58,12 +46,12 @@ func (fsm *FSM) Apply(log *raft.Log) any {
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
-	mp, err := fsm.store.Map(context.Background())
+	mp, err := fsm.store.Data(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	return &Snapshot{mp: mp}, nil
+	return &snapshot{mp: mp}, nil
 }
 
 func (fsm *FSM) Restore(snapshot io.ReadCloser) error {
@@ -73,7 +61,8 @@ func (fsm *FSM) Restore(snapshot io.ReadCloser) error {
 	}
 
 	for k, v := range mp {
-		fsm.store.Put(context.Background(), k, v) //todo
+		//todo no lock required according to hashicorp docs
+		fsm.store.Put(context.Background(), k, v) //todo fill store from reader
 	}
 
 	return nil

@@ -1,7 +1,14 @@
 package raft
 
-type Command struct {
-	Op    string `json:"op"`
-	Key   string `json:"key"`
-	Value string `json:"value"`
+type operation string
+
+const (
+	opPut    = "put"
+	opDelete = "delete"
+)
+
+type command struct {
+	Op    operation `json:"op"`
+	Key   string    `json:"key"`
+	Value string    `json:"value"`
 }

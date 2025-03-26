@@ -3,12 +3,12 @@ package app
 import (
 	"context"
 	"fmt"
-	grpcapi "github.com/HSE-RDBMS-course-work/kvstore/internal/api/grpc"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	grpcapi "kvstore/internal/api/grpc"
 	"log"
 	"log/slog"
 	"net"
@@ -27,7 +27,12 @@ func (sw *slogWrapper) Log(ctx context.Context, level logging.Level, msg string,
 	sw.log.Log(ctx, slog.Level(level), msg, fields)
 }
 
-func StartGRPCServer(cfg *GRPCServerConfig, api *grpcapi.Server, logger *slog.Logger) *grpc.Server {
+func StartGRPCServer(
+	cfg *GRPCServerConfig,
+	storeApi *grpcapi.KVStoreServer,
+	raftApi *grpcapi.RaftServer,
+	logger *slog.Logger,
+) *grpc.Server {
 	recoveryFunc := func(p any) (err error) { //todo use slog with context
 		log.Printf("panic: %v", p)
 		return status.Error(codes.Internal, "internal server error")
@@ -50,7 +55,8 @@ func StartGRPCServer(cfg *GRPCServerConfig, api *grpcapi.Server, logger *slog.Lo
 		),
 	)
 
-	api.RegisterTo(server)
+	storeApi.RegisterTo(server)
+	raftApi.RegisterTo(server)
 
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 

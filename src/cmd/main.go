@@ -28,19 +28,6 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     slog.LevelInfo,
-		AddSource: true,
-	})
-
-	logger := slog.New(handler)
-
-	store := core.NewStore()
-	fsm := raft.NewFSM(store)
-	distStore := raft.NewStore(store)
-
-	api := grpcapi.NewServer(distStore)
-
 	cfgFile, err := os.OpenFile("config.yaml", os.O_RDONLY, 0666)
 	if err != nil {
 		log.Fatalf("cannot open config file: %s", err)
@@ -51,8 +38,25 @@ func main() {
 		log.Fatalf("cannot read config: %s", err)
 	}
 
-	server := app.StartGRPCServer(&cfg.GRPCServerConfig, api, logger)
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     slog.LevelInfo,
+		AddSource: true,
+	})
+
+	logger := slog.New(handler)
+
+	store := core.NewStore()
+	fsm := raft.NewFSM(store)
+
 	raftNode := app.StartRaftNode(&cfg.RaftConfig, fsm)
+
+	//todo rename it
+	node := raft.NewNode(store, raftNode)
+
+	storeAPI := grpcapi.NewKVStoreServer(node)
+	raftAPI := grpcapi.NewRaftServer(node)
+
+	server := app.StartGRPCServer(&cfg.GRPCServerConfig, storeAPI, raftAPI, logger)
 
 	<-ctx.Done()
 

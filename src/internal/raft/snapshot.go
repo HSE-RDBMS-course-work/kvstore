@@ -1,4 +1,4 @@
-package fsm
+package raft
 
 import (
 	"encoding/json"
@@ -6,11 +6,11 @@ import (
 	"github.com/hashicorp/raft"
 )
 
-type Snapshot struct {
+type snapshot struct {
 	mp map[string]string
 }
 
-func (s *Snapshot) Persist(sink raft.SnapshotSink) (err error) {
+func (s *snapshot) Persist(sink raft.SnapshotSink) (err error) {
 	defer func() {
 		var closeFunc func() error
 		if err != nil {
@@ -34,4 +34,4 @@ func (s *Snapshot) Persist(sink raft.SnapshotSink) (err error) {
 	return nil
 }
 
-func (s *Snapshot) Release() {}
+func (s *snapshot) Release() {}

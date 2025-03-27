@@ -14,10 +14,11 @@ import (
 )
 
 //todo repositry https://github.com/otoolep/hraftd
+//todo grpc https://github.com/Jille/raft-grpc-example/blob/master/main.go
 //todo package for getters with no "Get"
-
-//todo объеденить три ноды
-//по идее они не отпралвяют друг другу никакие данные
+//todo логирование во всех модулях проверить как работет заинджектить свое
+//todo нормальный конфиг
+//todo прокинуть volume и протестить
 
 type Config struct {
 	RaftConfig       app.RaftConfig       `yaml:"raft"`
@@ -46,15 +47,15 @@ func main() {
 	logger := slog.New(handler)
 
 	store := core.NewStore()
-	fsm := raft.NewFSM(store)
+	fsm := raft.NewFSM(store, logger)
 
 	raftNode := app.StartRaftNode(&cfg.RaftConfig, fsm)
 
 	//todo rename it
-	node := raft.NewNode(store, raftNode)
+	distStore := raft.NewStore(store, raftNode)
 
-	storeAPI := grpcapi.NewKVStoreServer(node)
-	raftAPI := grpcapi.NewRaftServer(node)
+	storeAPI := grpcapi.NewKVStoreServer(distStore)
+	raftAPI := grpcapi.NewRaftServer(distStore)
 
 	server := app.StartGRPCServer(&cfg.GRPCServerConfig, storeAPI, raftAPI, logger)
 

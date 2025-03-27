@@ -35,6 +35,9 @@ func (s *RaftServer) Join(ctx context.Context, in *pb.JoinIn) (*emptypb.Empty, e
 	if errors.Is(err, raft.ErrNodeExist) {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	if errors.Is(err, raft.ErrIsNotLeader) {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
 	if err != nil { //returns it only for auth users so we can return detailed msg
 		return nil, status.Error(codes.Internal, err.Error())
 	}

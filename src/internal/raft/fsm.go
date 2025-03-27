@@ -6,6 +6,8 @@ import (
 	"errors"
 	"github.com/hashicorp/raft"
 	"io"
+	"kvstore/internal/sl"
+	"log/slog"
 )
 
 var (
@@ -13,20 +15,27 @@ var (
 )
 
 type FSM struct {
+	log   *slog.Logger
 	store kvstore
 }
 
-func NewFSM(store kvstore) *FSM {
+func NewFSM(store kvstore, log *slog.Logger) *FSM {
 	return &FSM{
 		store: store,
+		log:   log,
 	}
 }
 
+// Apply applies logs from leader to replicas
+// for more info check docs for raft.FSM
 func (fsm *FSM) Apply(log *raft.Log) any {
 	var cmd command
 	if err := json.Unmarshal(log.Data, &cmd); err != nil {
+		fsm.log.Warn("got incorrect json with command", sl.Error(err))
 		return err
 	}
+
+	fsm.log.Info("applying command", slCommand(cmd))
 
 	var err error
 	switch cmd.Op {
@@ -56,13 +65,12 @@ func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
 
 func (fsm *FSM) Restore(snapshot io.ReadCloser) error {
 	var mp map[string]string
-	if err := json.NewDecoder(snapshot).Decode(&mp); err != nil {
+	if err := json.NewDecoder(snapshot).Decode(&mp); err != nil { //todo add sync.Pool
 		return err
 	}
 
-	for k, v := range mp {
-		//todo no lock required according to hashicorp docs
-		fsm.store.Put(context.Background(), k, v) //todo fill store from reader
+	if err := fsm.store.Load(context.Background(), mp); err != nil {
+		return err
 	}
 
 	return nil

@@ -46,7 +46,6 @@ func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
 
 	localAddr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 
-	//todo
 	advertisedAddr, err := net.ResolveTCPAddr("tcp", cfg.Advertise)
 	if err != nil {
 		log.Fatalf("cannot resolve advertised address: %v", err)
@@ -84,6 +83,7 @@ func bootstrap(leader *raft.Raft, id string, addr string) {
 	}
 
 	go func() {
+		//todo catch error
 		leader.BootstrapCluster(configuration)
 	}()
 }
@@ -104,9 +104,7 @@ func join(leaderAddr, id, addr string) error {
 		NodeAddr: addr,
 		NodeID:   id,
 	}
-
-	log.Printf("send join request: %+v\n", &in)
-
+	
 	_, err = client.Join(context.TODO(), &in)
 	if err != nil {
 		return err

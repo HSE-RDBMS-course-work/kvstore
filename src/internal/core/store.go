@@ -16,12 +16,6 @@ type Store struct {
 	mu *sync.RWMutex
 }
 
-type Command struct {
-	Op    string `json:"op"`
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
 func NewStore() *Store {
 	return &Store{
 		mp: make(map[string]string),
@@ -45,7 +39,16 @@ func (s *Store) Get(ctx context.Context, key string) (string, error) {
 	return value, nil
 }
 
-func (s *Store) Put(ctx context.Context, key, value string) error {
+func (s *Store) Load(ctx context.Context, mp map[string]string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.mp = mp
+
+	return nil
+}
+
+func (s *Store) Put(ctx context.Context, key string, value string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

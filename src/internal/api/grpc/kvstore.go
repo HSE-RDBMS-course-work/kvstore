@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"kvstore/internal/core"
+	"kvstore/internal/raft"
 )
 
 type kvstore interface {
@@ -55,6 +56,9 @@ func (s *KVStoreServer) Put(ctx context.Context, in *pb.PutIn) (*emptypb.Empty, 
 	value := in.GetValue()
 
 	err := s.store.Put(ctx, key, value)
+	if errors.Is(err, raft.ErrIsNotLeader) {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to put")
 	}
@@ -66,6 +70,9 @@ func (s *KVStoreServer) Delete(ctx context.Context, in *pb.DeleteIn) (*emptypb.E
 	key := in.GetKey()
 
 	err := s.store.Delete(ctx, key)
+	if errors.Is(err, raft.ErrIsNotLeader) {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to delete")
 	}

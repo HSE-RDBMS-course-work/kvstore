@@ -9,6 +9,7 @@ import (
 
 //todo use VerifyLeader for prevent stale read in store.Get
 
+// Store make some key value storage distributed via raft
 type Store struct {
 	kvstore
 	raft *raft.Raft

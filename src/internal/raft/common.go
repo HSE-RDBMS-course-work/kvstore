@@ -16,8 +16,8 @@ type kvstore interface {
 type operation string
 
 const (
-	opPut    = "put"
-	opDelete = "delete"
+	opPut    operation = "put"
+	opDelete operation = "delete"
 )
 
 type command struct {

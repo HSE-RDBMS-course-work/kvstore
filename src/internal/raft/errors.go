@@ -8,6 +8,7 @@ import (
 var (
 	ErrIsNotLeader = errors.New("this node is not a leader")
 	ErrNodeExist   = errors.New("error node already in cluster")
+	ErrUnknownCmd  = errors.New("error unknown command")
 )
 
 type errNodeExist struct {

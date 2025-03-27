@@ -15,8 +15,6 @@ func NewServer(raft *raft.Raft) *Server {
 	}
 }
 
-//todo refactor
-
 func (s *Store) AcceptJoin(ctx context.Context, nodeAddr string, nodeID string) error {
 	if s.raft.VerifyLeader().Error() != nil {
 		return ErrIsNotLeader

@@ -3,17 +3,14 @@ package raft
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/hashicorp/raft"
 	"io"
 	"kvstore/internal/sl"
 	"log/slog"
 )
 
-var (
-	ErrUnknownCmd = errors.New("error unknown command")
-)
-
+// FSM is an implementation of final state machine
+// it is used by raft to apply logs from leader or from snapshots to store
 type FSM struct {
 	log   *slog.Logger
 	store kvstore

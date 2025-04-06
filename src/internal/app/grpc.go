@@ -12,11 +12,13 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"time"
 )
 
 type GRPCServerConfig struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
+	Host    string        `yaml:"host"`
+	Port    string        `yaml:"port"`
+	Timeout time.Duration `yaml:"timeout"`
 }
 
 type slogWrapper struct {
@@ -53,6 +55,7 @@ func StartGRPCServer(
 			recoveryMW,
 			loggingMW,
 		),
+		grpc.ConnectionTimeout(cfg.Timeout),
 	)
 
 	storeApi.RegisterTo(server)

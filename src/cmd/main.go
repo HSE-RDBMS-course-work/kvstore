@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/caarlos0/env/v6"
 	"gopkg.in/yaml.v3"
 	grpcapi "kvstore/internal/api/grpc"
 	"kvstore/internal/app"
@@ -37,6 +38,10 @@ func main() {
 	cfg := Config{}
 	if err := yaml.NewDecoder(cfgFile).Decode(&cfg); err != nil {
 		log.Fatalf("cannot read config: %s", err)
+	}
+
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("cannot parse environment variables: %s", err)
 	}
 
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{

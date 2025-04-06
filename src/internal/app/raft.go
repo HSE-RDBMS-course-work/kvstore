@@ -15,14 +15,16 @@ import (
 )
 
 type RaftConfig struct {
-	Host             string `yaml:"host"`
-	Advertise        string `yaml:"advertise"`
-	Port             string `yaml:"port"`
-	LocalID          string `yaml:"local_id"`
-	LogLocation      string `yaml:"log_location"`
-	StableLocation   string `yaml:"stable_location"`
-	SnapshotLocation string `yaml:"snapshot_location"`
-	LeaderAddr       string `yaml:"leader_address"`
+	Host             string        `yaml:"host"`
+	Advertise        string        `yaml:"advertise" env:"RAFT_ADVERTISE"`
+	Port             string        `yaml:"port"`
+	LocalID          string        `yaml:"local_id" env:"RAFT_LOCAL_ID"`
+	LogLocation      string        `yaml:"log_location"`
+	StableLocation   string        `yaml:"stable_location"`
+	SnapshotLocation string        `yaml:"snapshot_location"`
+	LeaderAddr       string        `yaml:"leader_address" env:"RAFT_LEADER_ADDRESS"`
+	Timeout          time.Duration `yaml:"timeout"`
+	MaxPool          int           `yaml:"max_pool"`
 }
 
 func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
@@ -51,7 +53,7 @@ func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
 		log.Fatalf("cannot resolve advertised address: %v", err)
 	}
 
-	transport, err := raft.NewTCPTransport(localAddr, advertisedAddr, 3, 10*time.Second, os.Stderr)
+	transport, err := raft.NewTCPTransport(localAddr, advertisedAddr, cfg.MaxPool, cfg.Timeout, os.Stderr)
 	if err != nil {
 		log.Fatalf("cannot create transport: %v", err)
 	}
@@ -104,7 +106,7 @@ func join(leaderAddr, id, addr string) error {
 		NodeAddr: addr,
 		NodeID:   id,
 	}
-	
+
 	_, err = client.Join(context.TODO(), &in)
 	if err != nil {
 		return err

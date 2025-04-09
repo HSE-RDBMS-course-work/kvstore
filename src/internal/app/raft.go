@@ -8,28 +8,15 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"kvstore/internal/config"
 	"log"
 	"net"
 	"os"
-	"time"
 )
 
-type RaftConfig struct {
-	Host             string        `yaml:"host"`
-	Advertise        string        `yaml:"advertise" env:"RAFT_ADVERTISE"`
-	Port             string        `yaml:"port"`
-	LocalID          string        `yaml:"local_id" env:"RAFT_LOCAL_ID"`
-	LogLocation      string        `yaml:"log_location"`
-	StableLocation   string        `yaml:"stable_location"`
-	SnapshotLocation string        `yaml:"snapshot_location"`
-	LeaderAddr       string        `yaml:"leader_address" env:"RAFT_LEADER_ADDRESS"`
-	Timeout          time.Duration `yaml:"timeout"`
-	MaxPool          int           `yaml:"max_pool"`
-}
-
-func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
-	config := raft.DefaultConfig() //todo pass logger
-	config.LocalID = raft.ServerID(cfg.LocalID)
+func StartRaftNode(cfg *config.RaftConfig, fsm raft.FSM) *raft.Raft {
+	raftConfig := raft.DefaultConfig() //todo pass logger
+	raftConfig.LocalID = raft.ServerID(cfg.LocalID)
 
 	logStore, err := raftboltdb.NewBoltStore(cfg.LogLocation)
 	if err != nil {
@@ -58,7 +45,7 @@ func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
 		log.Fatalf("cannot create transport: %v", err)
 	}
 
-	node, err := raft.NewRaft(config, fsm, logStore, stableStore, snapshots, transport)
+	node, err := raft.NewRaft(raftConfig, fsm, logStore, stableStore, snapshots, transport)
 	if err != nil {
 		log.Fatalf("cannot create raft node: %v", err)
 	}

@@ -11,3 +11,6 @@ raft:
   snapshot_location: "."
   time_out: 5s
   max_pool: 3
+  local_id: "node2"
+  advertise: "node2:3000"
+  leader_address: "node1:8080"

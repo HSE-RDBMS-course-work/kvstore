@@ -9,17 +9,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	grpcapi "kvstore/internal/api/grpc"
+	"kvstore/internal/config"
 	"log"
 	"log/slog"
 	"net"
-	"time"
 )
-
-type GRPCServerConfig struct {
-	Host    string        `yaml:"host"`
-	Port    string        `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
-}
 
 type slogWrapper struct {
 	log *slog.Logger
@@ -30,7 +24,7 @@ func (sw *slogWrapper) Log(ctx context.Context, level logging.Level, msg string,
 }
 
 func StartGRPCServer(
-	cfg *GRPCServerConfig,
+	cfg *config.GRPCServerConfig,
 	storeApi *grpcapi.KVStoreServer,
 	raftApi *grpcapi.RaftServer,
 	logger *slog.Logger,

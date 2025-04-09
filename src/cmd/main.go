@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/caarlos0/env/v6"
-	"gopkg.in/yaml.v3"
 	grpcapi "kvstore/internal/api/grpc"
 	"kvstore/internal/app"
+	"kvstore/internal/config"
 	"kvstore/internal/core"
 	"kvstore/internal/raft"
 	"log"
@@ -21,27 +20,13 @@ import (
 //todo нормальный конфиг
 //todo прокинуть volume и протестить
 
-type Config struct {
-	RaftConfig       app.RaftConfig       `yaml:"raft"`
-	GRPCServerConfig app.GRPCServerConfig `yaml:"grpc_server"`
-}
-
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	cfgFile, err := os.OpenFile("config.yaml", os.O_RDONLY, 0666)
+	cfg, err := config.New()
 	if err != nil {
-		log.Fatalf("cannot open config file: %s", err)
-	}
-
-	cfg := Config{}
-	if err := yaml.NewDecoder(cfgFile).Decode(&cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err)
-	}
-
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("cannot parse environment variables: %s", err)
+		log.Fatalf("cannot read config file: %s", err)
 	}
 
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{

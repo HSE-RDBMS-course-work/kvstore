@@ -24,4 +24,4 @@ WORKDIR /home/appuser/app
 
 COPY --from=builder /app/app app
 
-ENTRYPOINT ["./app"]
+ENTRYPOINT ["./app", "--config-path=./config.yaml"]

@@ -8,26 +8,15 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"kvstore/internal/config"
 	"log"
 	"net"
 	"os"
-	"time"
 )
 
-type RaftConfig struct {
-	Host             string `yaml:"host"`
-	Advertise        string `yaml:"advertise"`
-	Port             string `yaml:"port"`
-	LocalID          string `yaml:"local_id"`
-	LogLocation      string `yaml:"log_location"`
-	StableLocation   string `yaml:"stable_location"`
-	SnapshotLocation string `yaml:"snapshot_location"`
-	LeaderAddr       string `yaml:"leader_address"`
-}
-
-func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
-	config := raft.DefaultConfig() //todo pass logger
-	config.LocalID = raft.ServerID(cfg.LocalID)
+func StartRaftNode(cfg *config.RaftConfig, fsm raft.FSM) *raft.Raft {
+	raftConfig := raft.DefaultConfig() //todo pass logger
+	raftConfig.LocalID = raft.ServerID(cfg.LocalID)
 
 	logStore, err := raftboltdb.NewBoltStore(cfg.LogLocation)
 	if err != nil {
@@ -51,12 +40,12 @@ func StartRaftNode(cfg *RaftConfig, fsm raft.FSM) *raft.Raft {
 		log.Fatalf("cannot resolve advertised address: %v", err)
 	}
 
-	transport, err := raft.NewTCPTransport(localAddr, advertisedAddr, 3, 10*time.Second, os.Stderr)
+	transport, err := raft.NewTCPTransport(localAddr, advertisedAddr, cfg.MaxPool, cfg.Timeout, os.Stderr)
 	if err != nil {
 		log.Fatalf("cannot create transport: %v", err)
 	}
 
-	node, err := raft.NewRaft(config, fsm, logStore, stableStore, snapshots, transport)
+	node, err := raft.NewRaft(raftConfig, fsm, logStore, stableStore, snapshots, transport)
 	if err != nil {
 		log.Fatalf("cannot create raft node: %v", err)
 	}
@@ -104,7 +93,7 @@ func join(leaderAddr, id, addr string) error {
 		NodeAddr: addr,
 		NodeID:   id,
 	}
-	
+
 	_, err = client.Join(context.TODO(), &in)
 	if err != nil {
 		return err

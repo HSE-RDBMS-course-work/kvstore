@@ -1,13 +1,16 @@
 grpc_server:
   host: "0.0.0.0"
   port: "8080"
+  time_out: 5s
 
 raft:
   host: "0.0.0.0"
   port: "3000"
-  advertise: "node2:3000"
-  local_id: "node2"
   log_location: "raft-log.db"
   stable_location: "raft-stable.db"
   snapshot_location: "."
+  time_out: 5s
+  max_pool: 3
+  local_id: "node2"
+  advertise: "node2:3000"
   leader_address: "node1:8080"

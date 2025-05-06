@@ -2,15 +2,23 @@ package raft
 
 import (
 	"context"
+	"github.com/hashicorp/raft"
+	"kvstore/internal/core"
 	"log/slog"
+	"time"
 )
 
+type ServerID = raft.ServerID
+
+type ServerAddress = raft.ServerAddress
+
 type kvstore interface {
-	Data(ctx context.Context) (map[string]string, error)
-	Get(ctx context.Context, key string) (string, error)
-	Load(ctx context.Context, mp map[string]string) error
-	Put(ctx context.Context, key, value string) error
-	Delete(ctx context.Context, key string) error
+	Get(context.Context, core.Key) (*core.Value, error)
+	Put(context.Context, core.Key, core.Value, time.Duration) error
+	Delete(context.Context, core.Key) error
+	Expired(context.Context) <-chan core.Key
+	Snapshot(context.Context) (core.Snapshot, error)
+	Load(context.Context, core.Snapshot) error
 }
 
 type operation string
@@ -21,16 +29,18 @@ const (
 )
 
 type command struct {
-	Op    operation `json:"op"`
-	Key   string    `json:"key"`
-	Value string    `json:"value"`
+	Op    operation     `json:"op"`
+	Key   core.Key      `json:"key"`
+	Value core.Value    `json:"value"`
+	TTL   time.Duration `json:"ttl"`
 }
 
-func slCommand(cmd command) slog.Attr {
+func (cmd *command) LogValue() slog.Attr {
 	return slog.Group(
 		"command",
 		slog.String("op", string(cmd.Op)),
-		slog.String("key", cmd.Key),
-		slog.String("value", cmd.Value),
+		slog.String("key", string(cmd.Key)),
+		slog.String("value", string(cmd.Value)),
+		slog.Duration("ttl", cmd.TTL),
 	)
 }

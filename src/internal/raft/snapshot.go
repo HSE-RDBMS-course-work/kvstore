@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/hashicorp/raft"
+	"kvstore/internal/core"
 )
 
 type snapshot struct {
-	mp map[string]string
+	core.Snapshot
 }
 
 func (s *snapshot) Persist(sink raft.SnapshotSink) (err error) {
@@ -24,7 +25,7 @@ func (s *snapshot) Persist(sink raft.SnapshotSink) (err error) {
 		}
 	}()
 
-	data, err := json.Marshal(s.mp)
+	data, err := json.Marshal(s.Snapshot)
 	if err != nil {
 		return err
 	}

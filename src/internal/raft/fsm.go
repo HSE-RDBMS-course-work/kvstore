@@ -3,6 +3,7 @@ package raft
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/hashicorp/raft"
 	"io"
 	"kvstore/internal/sl"
@@ -10,34 +11,41 @@ import (
 )
 
 // FSM is an implementation of final state machine
-// it is used by raft to apply logs from leader or from snapshots to store
+// it is used by raft to apply logs from existLeader or from snapshots to store
 type FSM struct {
-	log   *slog.Logger
-	store kvstore
+	logger *slog.Logger
+	store  kvstore
 }
 
-func NewFSM(store kvstore, log *slog.Logger) *FSM {
-	return &FSM{
-		store: store,
-		log:   log,
+func NewFSM(logger *slog.Logger, store kvstore) (*FSM, error) {
+	if logger == nil {
+		return nil, errors.New("logger required")
 	}
+	if store == nil {
+		return nil, errors.New("store required")
+	}
+
+	return &FSM{
+		store:  store,
+		logger: logger,
+	}, nil
 }
 
-// Apply applies logs from leader to replicas
+// Apply applies logs from existLeader to replicas
 // for more info check docs for raft.FSM
 func (fsm *FSM) Apply(log *raft.Log) any {
 	var cmd command
 	if err := json.Unmarshal(log.Data, &cmd); err != nil {
-		fsm.log.Warn("got incorrect json with command", sl.Error(err))
+		fsm.logger.Warn("got incorrect json with command", sl.Error(err))
 		return err
 	}
 
-	fsm.log.Info("applying command", slCommand(cmd))
+	fsm.logger.Info("applying command", cmd)
 
 	var err error
 	switch cmd.Op {
 	case opPut:
-		err = fsm.store.Put(context.Background(), cmd.Key, cmd.Value)
+		err = fsm.store.Put(context.Background(), cmd.Key, cmd.Value, cmd.TTL)
 	case opDelete:
 		err = fsm.store.Delete(context.Background(), cmd.Key)
 	default:
@@ -52,21 +60,23 @@ func (fsm *FSM) Apply(log *raft.Log) any {
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
-	mp, err := fsm.store.Data(context.Background())
+	snap, err := fsm.store.Snapshot(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	return &snapshot{mp: mp}, nil
+	return &snapshot{
+		Snapshot: snap,
+	}, nil
 }
 
-func (fsm *FSM) Restore(snapshot io.ReadCloser) error {
-	var mp map[string]string
-	if err := json.NewDecoder(snapshot).Decode(&mp); err != nil { //todo add sync.Pool
+func (fsm *FSM) Restore(reader io.ReadCloser) error {
+	var snap snapshot
+	if err := json.NewDecoder(reader).Decode(&snap); err != nil {
 		return err
 	}
 
-	if err := fsm.store.Load(context.Background(), mp); err != nil {
+	if err := fsm.store.Load(context.Background(), snap.Snapshot); err != nil {
 		return err
 	}
 

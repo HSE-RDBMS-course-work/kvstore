@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	grpcapi "kvstore/internal/api/grpc"
-	"kvstore/internal/app"
 	"kvstore/internal/config"
 	"kvstore/internal/core"
+	"kvstore/internal/grpc/clients"
+	"kvstore/internal/grpc/servers"
 	"kvstore/internal/raft"
+	"kvstore/internal/sl"
 	"log"
 	"log/slog"
 	"os"
@@ -21,36 +22,95 @@ import (
 //todo прокинуть volume и протестить
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
-	cfg, err := config.New()
+	conf, err := config.Read()
 	if err != nil {
 		log.Fatalf("cannot read config file: %s", err)
 	}
 
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level:     slog.LevelInfo,
-		AddSource: true,
+		AddSource: false,
 	})
-
 	logger := slog.New(handler)
 
-	store := core.NewStore()
-	fsm := raft.NewFSM(store, logger)
+	store, err := core.NewStore(logger, conf.Store())
+	if err != nil {
+		logger.Error("cannot create store", sl.Error(err))
+		return
+	}
 
-	raftNode := app.StartRaftNode(&cfg.RaftConfig, fsm)
+	existLeader, err := clients.NewRaftClient(conf.JoinTo)
+	if err != nil {
+		logger.Error("cannot create raft client", sl.Error(err))
+		return
+	}
 
-	//todo rename it
-	distStore := raft.NewStore(store, raftNode)
+	fsm, err := raft.NewFSM(logger, store)
+	if err != nil {
+		logger.Error("cannot create FSM", sl.Error(err))
+		return
+	}
 
-	storeAPI := grpcapi.NewKVStoreServer(distStore)
-	raftAPI := grpcapi.NewRaftServer(distStore)
+	r, err := raft.New(fsm, os.Stderr, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
+	if err != nil {
+		logger.Error("cannot create raft instance", sl.Error(err))
+		return
+	}
 
-	server := app.StartGRPCServer(&cfg.GRPCServerConfig, storeAPI, raftAPI, logger)
+	distributedStore, err := raft.NewStore(logger, r, store)
+	if err != nil {
+		logger.Error("cannot create distributed store", sl.Error(err))
+		return
+	}
+
+	clusterNode, err := raft.NewClusterNode(logger, r, existLeader, conf.ClusterNode())
+	if err != nil {
+		logger.Error("cannot create cluster node", sl.Error(err))
+		return
+	}
+
+	srv, err := servers.New(logger, conf.GRPCServer())
+	if err != nil {
+		logger.Error("cannot create server", sl.Error(err))
+		return
+	}
+
+	raftServer, err := servers.NewRaftServer(clusterNode)
+	if err != nil {
+		logger.Error("cannot create raft grpc server", sl.Error(err))
+		return
+	}
+	raftServer.RegisterTo(srv.Server)
+
+	kvstoreServer, err := servers.NewKVStoreServer(distributedStore)
+	if err != nil {
+		logger.Error("cannot create kvstore grpc server", sl.Error(err))
+		return
+	}
+	kvstoreServer.RegisterTo(srv.Server)
+
+	go func() { //todo нормально сделать
+		if err := clusterNode.Run(ctx); err != nil {
+			logger.Error("cannot start cluster node", sl.Error(err))
+			stop()
+		}
+	}()
+
+	go func() {
+		if err := srv.Run(); err != nil {
+			logger.Error("cannot start server", sl.Error(err))
+			stop()
+		}
+	}()
 
 	<-ctx.Done()
 
-	server.GracefulStop()
-	raftNode.Shutdown()
+	srv.Stop()
+
+	if err := clusterNode.Shutdown(); err != nil {
+		logger.Error("cannot shutdown cluster", sl.Error(err))
+	}
 }

@@ -3,31 +3,58 @@ package raft
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/hashicorp/raft"
+	"kvstore/internal/core"
+	"log/slog"
 	"time"
 )
 
-//todo use VerifyLeader for prevent stale read in store.Get
+//todo перенаправлять запросы на лидера
 
 // Store make some key value storage distributed via raft
 type Store struct {
-	kvstore
-	raft *raft.Raft
+	logger *slog.Logger
+	raft   *raft.Raft
+	store  kvstore
 }
 
-func NewStore(store kvstore, raft *raft.Raft) *Store {
-	return &Store{
-		kvstore: store,
-		raft:    raft,
+func NewStore(logger *slog.Logger, raft *raft.Raft, store kvstore) (*Store, error) {
+	if logger == nil {
+		return nil, errors.New("logger required")
 	}
+	if raft == nil {
+		return nil, errors.New("raft required")
+	}
+	if store == nil {
+		return nil, errors.New("store required")
+	}
+
+	return &Store{
+		logger: logger,
+		raft:   raft,
+		store:  store,
+	}, nil
 }
 
-func (s *Store) Put(ctx context.Context, key string, value string) error {
-	if s.raft.VerifyLeader().Error() != nil {
+func (s *Store) Get(ctx context.Context, key core.Key) (*core.Value, error) {
+	return s.store.Get(ctx, key)
+}
+
+func (s *Store) ConsistentGet(ctx context.Context, key core.Key) (*core.Value, error) {
+	if !s.isLeader() {
+		return nil, ErrIsNotLeader
+	}
+
+	return s.store.Get(ctx, key)
+}
+
+func (s *Store) Put(ctx context.Context, key core.Key, value core.Value, ttl time.Duration) error {
+	if !s.isLeader() {
 		return ErrIsNotLeader
 	}
 
-	if err := s.kvstore.Put(ctx, key, value); err != nil {
+	if err := s.store.Put(ctx, key, value, ttl); err != nil {
 		return err
 	}
 
@@ -35,17 +62,18 @@ func (s *Store) Put(ctx context.Context, key string, value string) error {
 		Op:    opPut,
 		Key:   key,
 		Value: value,
+		TTL:   ttl,
 	}
 
 	return s.apply(ctx, cmd)
 }
 
-func (s *Store) Delete(ctx context.Context, key string) error {
+func (s *Store) Delete(ctx context.Context, key core.Key) error {
 	if s.raft.VerifyLeader().Error() != nil {
 		return ErrIsNotLeader
 	}
 
-	if err := s.kvstore.Delete(ctx, key); err != nil {
+	if err := s.store.Delete(ctx, key); err != nil {
 		return err
 	}
 
@@ -55,6 +83,10 @@ func (s *Store) Delete(ctx context.Context, key string) error {
 	}
 
 	return s.apply(ctx, cmd)
+}
+
+func (s *Store) isLeader() bool {
+	return s.raft.State() == raft.Leader
 }
 
 func (s *Store) apply(ctx context.Context, cmd command) error {

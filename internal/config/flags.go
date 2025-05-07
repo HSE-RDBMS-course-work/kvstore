@@ -15,8 +15,8 @@ var (
 	username   = flag.String("username", "", "Username to use for authentication")
 	password   = flag.String("password", "", "Password to use for authentication")
 	host       = flag.String("host", "0.0.0.0", "Host to use for authentication")
-	pPort      = flag.String("public-port", "3000", "Port to use for authentication")
-	iPort      = flag.String("internal-port", "8090", "Port to use for authentication")
+	pPort      = flag.String("public-port", "8090", "Port to use for authentication")
+	iPort      = flag.String("internal-port", "3000", "Port to use for authentication")
 	joinTo     = flag.String("join-to", "", "Address of the leader or some node of cluster which is running, provide it to join to this cluster")
 )
 

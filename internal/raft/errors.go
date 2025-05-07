@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrIsNotLeader = errors.New("this node is not a existLeader")
+	ErrIsNotLeader = errors.New("this node is not a leader")
 	ErrNodeExist   = errors.New("node already in cluster")
 	ErrUnknownCmd  = errors.New("unknown command")
 )

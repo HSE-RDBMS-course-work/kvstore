@@ -33,7 +33,7 @@ func (s *RaftServer) RegisterTo(server *grpc.Server) {
 	pb.RegisterRaftServer(server, s)
 }
 
-func (s *RaftServer) Join(ctx context.Context, in *pb.JoinIn) (*pb.JoinOut, error) {
+func (s *RaftServer) JoinToCluster(ctx context.Context, in *pb.JoinIn) (*pb.JoinOut, error) {
 	err := s.cluster.AcceptJoin(ctx, raft.JoinToClusterIn{
 		JoinerID:      raft.ServerID(in.JoinerId),
 		JoinerAddress: raft.ServerAddress(in.JoinerAddress),

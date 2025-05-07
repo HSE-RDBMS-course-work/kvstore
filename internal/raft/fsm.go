@@ -11,7 +11,7 @@ import (
 )
 
 // FSM is an implementation of final state machine
-// it is used by raft to apply logs from existLeader or from snapshots to store
+// it is used by raft to apply logs from leader or from snapshots to store
 type FSM struct {
 	logger *slog.Logger
 	store  kvstore
@@ -36,7 +36,7 @@ func NewFSM(logger *slog.Logger, store kvstore) (*FSM, error) {
 	}, nil
 }
 
-// Apply applies logs from existLeader to replicas
+// Apply applies logs from leader to replicas
 // for more info check docs for raft.FSM
 func (fsm *FSM) Apply(log *raft.Log) any {
 	var cmd command

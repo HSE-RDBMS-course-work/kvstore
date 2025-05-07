@@ -74,7 +74,7 @@ func NewClusterNode(logger *slog.Logger, r *raft.Raft, existLeader existLeader, 
 }
 
 func (r *ClusterNode) AcceptJoin(ctx context.Context, in JoinToClusterIn) error {
-	if r.raft.State() != raft.Leader { //todo redirect it to real existLeader
+	if r.raft.State() != raft.Leader { //todo redirect it to real Leader
 		return ErrIsNotLeader
 	}
 

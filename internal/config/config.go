@@ -70,7 +70,7 @@ func Read() (*Config, error) {
 	c.RaftConfig.NodeID = uuid.NewString()
 
 	if c.RaftConfig.Advertise == "" {
-		c.RaftConfig.Advertise = c.address(c.Host, c.InternalPort)
+		c.RaftConfig.Advertise = c.address("localhost", c.InternalPort)
 	}
 
 	return &c, nil

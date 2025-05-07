@@ -45,9 +45,12 @@ func New(logger *slog.Logger, fsm raft.FSM, out io.Writer, conf Config) (*raft.R
 		return nil, fmt.Errorf("cannot create snapshot store: %v", err)
 	}
 
-	advertisedAddr, err := net.ResolveTCPAddr("tcp", conf.AdvertisedAddress)
-	if err != nil {
-		return nil, fmt.Errorf("cannot resolve advertised address: %v", err)
+	var advertisedAddr *net.TCPAddr
+	if conf.AdvertisedAddress != "" {
+		advertisedAddr, err = net.ResolveTCPAddr("tcp", conf.AdvertisedAddress)
+		if err != nil {
+			return nil, fmt.Errorf("cannot resolve advertised address: %v", err)
+		}
 	}
 
 	transport, err := raft.NewTCPTransport(conf.RealAddress, advertisedAddr, conf.MaxPool, conf.Timeout, out)

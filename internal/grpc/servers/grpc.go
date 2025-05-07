@@ -25,11 +25,12 @@ func (sw *slogWrapper) Log(ctx context.Context, level logging.Level, msg string,
 }
 
 type Config struct {
-	Address string
-	Timeout time.Duration
+	Address           string
+	ConnectionTimeout time.Duration
 }
 
 type Server struct {
+	logger   *slog.Logger
 	listener net.Listener
 	*grpc.Server
 }
@@ -39,30 +40,26 @@ func New(logger *slog.Logger, conf Config) (*Server, error) {
 		return nil, errors.New("logger required")
 	}
 
+	recoveryLogger := logger.With(sl.Component("grpc.Recovery"))
+
 	recoveryFunc := func(p any) (err error) {
-		logger.Error("panic while handling grpc request",
+		recoveryLogger.Error("panic while handling grpc request",
 			sl.Panic(p),
 			slog.String("trace", string(debug.Stack())),
 		)
 		return status.Error(codes.Internal, "internal servers error")
 	}
 
-	recoveryMW := recovery.UnaryServerInterceptor(
-		recovery.WithRecoveryHandler(recoveryFunc),
-	)
-
-	loggingMW := logging.UnaryServerInterceptor(
-		&slogWrapper{
-			log: logger,
-		},
-	)
-
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			recoveryMW,
-			loggingMW,
+			recovery.UnaryServerInterceptor(
+				recovery.WithRecoveryHandler(recoveryFunc),
+			),
+			logging.UnaryServerInterceptor(
+				&slogWrapper{log: logger},
+			),
 		),
-		grpc.ConnectionTimeout(conf.Timeout),
+		grpc.ConnectionTimeout(conf.ConnectionTimeout),
 	)
 
 	listener, err := net.Listen("tcp", conf.Address)
@@ -70,12 +67,25 @@ func New(logger *slog.Logger, conf Config) (*Server, error) {
 		return nil, fmt.Errorf("failed create listener: %w", err)
 	}
 
+	logger = logger.With(sl.Component("grpc.Servers"))
+
+	logger.Debug("created successfully", sl.Conf(conf))
+
 	return &Server{
+		logger:   logger,
 		listener: listener,
 		Server:   server,
 	}, nil
 }
 
 func (s *Server) Run() error {
+	s.logger.Info("starting server", slog.String("address", s.listener.Addr().String()))
 	return s.Server.Serve(s.listener)
+}
+
+func (s *Server) Shutdown() error {
+	s.logger.Info("shutting down")
+	s.Server.GracefulStop()
+	s.logger.Info("shut down gracefully")
+	return nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"kvstore/internal/config"
 	"kvstore/internal/core"
 	"kvstore/internal/grpc/clients"
@@ -31,70 +32,75 @@ func main() {
 	}
 
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     slog.LevelInfo,
+		Level:     slog.LevelDebug,
 		AddSource: false,
 	})
 	logger := slog.New(handler)
 
+	cl := logger.With(sl.Component("di"))
+
 	store, err := core.NewStore(logger, conf.Store())
 	if err != nil {
-		logger.Error("cannot create store", sl.Error(err))
+		cl.Error("cannot create store", sl.Error(err))
 		return
 	}
 
-	existLeader, err := clients.NewRaftClient(conf.JoinTo)
-	if err != nil {
-		logger.Error("cannot create raft client", sl.Error(err))
+	existLeader, err := clients.NewRaftClient(conf.JoinTo())
+	if errors.Is(err, clients.ErrAddressIsEmpty) {
+		cl.Warn("no cluster node to join to cluster was provided. It is ok if you want to bootstrap cluster")
+	}
+	if err != nil && !errors.Is(err, clients.ErrAddressIsEmpty) {
+		cl.Error("cannot create raft client", sl.Error(err))
 		return
 	}
 
 	fsm, err := raft.NewFSM(logger, store)
 	if err != nil {
-		logger.Error("cannot create FSM", sl.Error(err))
+		cl.Error("cannot create FSM", sl.Error(err))
 		return
 	}
 
-	r, err := raft.New(fsm, os.Stderr, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
+	r, err := raft.New(logger, fsm, os.Stderr, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
 	if err != nil {
-		logger.Error("cannot create raft instance", sl.Error(err))
+		cl.Error("cannot create raft instance", sl.Error(err))
 		return
 	}
 
 	distributedStore, err := raft.NewStore(logger, r, store)
 	if err != nil {
-		logger.Error("cannot create distributed store", sl.Error(err))
+		cl.Error("cannot create distributed store", sl.Error(err))
 		return
 	}
 
 	clusterNode, err := raft.NewClusterNode(logger, r, existLeader, conf.ClusterNode())
 	if err != nil {
-		logger.Error("cannot create cluster node", sl.Error(err))
+		cl.Error("cannot create cluster node", sl.Error(err))
 		return
 	}
 
 	srv, err := servers.New(logger, conf.GRPCServer())
 	if err != nil {
-		logger.Error("cannot create server", sl.Error(err))
+		cl.Error("cannot create server", sl.Error(err))
 		return
 	}
 
 	raftServer, err := servers.NewRaftServer(clusterNode)
 	if err != nil {
-		logger.Error("cannot create raft grpc server", sl.Error(err))
+		cl.Error("cannot create raft grpc server", sl.Error(err))
 		return
 	}
 	raftServer.RegisterTo(srv.Server)
 
 	kvstoreServer, err := servers.NewKVStoreServer(distributedStore)
 	if err != nil {
-		logger.Error("cannot create kvstore grpc server", sl.Error(err))
+		cl.Error("cannot create kvstore grpc server", sl.Error(err))
 		return
 	}
 	kvstoreServer.RegisterTo(srv.Server)
 
 	go func() { //todo нормально сделать
 		if err := clusterNode.Run(ctx); err != nil {
-			logger.Error("cannot start cluster node", sl.Error(err))
+			cl.Error("cannot start cluster node", sl.Error(err))
 			stop()
 		}
 	}()

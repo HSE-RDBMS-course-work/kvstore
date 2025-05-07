@@ -1,0 +1,18 @@
+host: ${KVSTORE_USER}
+public_port: ${KVSTORE_PUBLIC_PORT}
+internal_port: ${KVSTORE_INTERNAL_PORT}
+username: ${KVSTORE_USERNAME}
+password: ${KVSTORE_PASSWORD}
+join_to: ${JOIN_TO}
+data_path: ${KVSTORE_DATA}
+storage:
+  clean_interval: 5m
+  max_clean_duration: 0.5s
+  initial_capacity: 10_000
+grpc_server:
+  connection_timeout: 5s
+raft:
+  advertise: ${KVSTORE_ADVERTISED_ADDRESS}
+  timeout: 5s
+  max_pool: 3
+  snapshots_retain: 2

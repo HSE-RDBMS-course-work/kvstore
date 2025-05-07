@@ -21,13 +21,18 @@ func NewFSM(logger *slog.Logger, store kvstore) (*FSM, error) {
 	if logger == nil {
 		return nil, errors.New("logger required")
 	}
+
+	logger = logger.With(sl.Component("raft.FSM"))
+
 	if store == nil {
 		return nil, errors.New("store required")
 	}
 
+	logger.Debug("created successfully")
+
 	return &FSM{
-		store:  store,
 		logger: logger,
+		store:  store,
 	}, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/hashicorp/raft"
 	"kvstore/internal/core"
+	"kvstore/internal/sl"
 	"log/slog"
 	"time"
 )
@@ -23,12 +24,17 @@ func NewStore(logger *slog.Logger, raft *raft.Raft, store kvstore) (*Store, erro
 	if logger == nil {
 		return nil, errors.New("logger required")
 	}
+
+	logger = logger.With(sl.Component("raft.Store"))
+
 	if raft == nil {
 		return nil, errors.New("raft required")
 	}
 	if store == nil {
 		return nil, errors.New("store required")
 	}
+
+	logger.Debug("created successfully")
 
 	return &Store{
 		logger: logger,

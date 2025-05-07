@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"kvstore/internal/core"
 	"kvstore/internal/grpc/servers"
@@ -17,7 +18,6 @@ type Config struct {
 	InternalPort     string     `mapstructure:"internal_port"`
 	Username         string     `mapstructure:"username"`
 	Password         string     `mapstructure:"password"`
-	JoinTo           string     `mapstructure:"join_to"`
 	DataPath         string     `mapstructure:"data_path"`
 	StoreConfig      Store      `mapstructure:"storage"`
 	GRPCServerConfig GRPCServer `mapstructure:"grpc_server"`
@@ -31,13 +31,12 @@ type Store struct {
 }
 
 type GRPCServer struct {
-	Timeout time.Duration `mapstructure:"timeout"`
+	ConnectionTimeout time.Duration `mapstructure:"connection_timeout"`
 }
 
 type Raft struct {
 	Advertise       string        `mapstructure:"advertise"`
-	NodeID          string        `mapstructure:"node_id"`
-	DataLocation    string        `mapstructure:"data_location"`
+	NodeID          string        `mapstructure:"-"`
 	Timeout         time.Duration `mapstructure:"timeout"`
 	MaxPool         int           `mapstructure:"max_pool"`
 	SnapshotsRetain int           `mapstructure:"snapshots_retain"`
@@ -51,23 +50,30 @@ func Read() (*Config, error) {
 		return nil, fmt.Errorf("cannot read config file (%s): %w", configPath, err)
 	}
 
-	var conf Config
-	if err := vp.Unmarshal(&conf); err != nil {
+	var c Config
+	if err := vp.Unmarshal(&c); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal config from file: %w", err)
 	}
 
-	if err := conf.expandEnv(); err != nil {
+	if err := c.expandEnv(); err != nil {
 		return nil, fmt.Errorf("cannot expand env varibles in config: %w", err)
 	}
 
-	conf.choose(&conf.DataPath, dataPath)
-	conf.choose(&conf.Host, host)
-	conf.choose(&conf.PublicPort, pPort)
-	conf.choose(&conf.InternalPort, iPort)
-	conf.choose(&conf.Username, username)
-	conf.choose(&conf.Password, password)
+	c.choose(&c.DataPath, dataPath)
+	c.choose(&c.Host, host)
+	c.choose(&c.PublicPort, pPort)
+	c.choose(&c.InternalPort, iPort)
+	c.choose(&c.Username, username)
+	c.choose(&c.Password, password)
+	c.choose(&c.RaftConfig.Advertise, advertise) //todo move this field to root of the config
 
-	return &conf, nil
+	c.RaftConfig.NodeID = uuid.NewString()
+
+	if c.RaftConfig.Advertise == "" {
+		c.RaftConfig.Advertise = c.address(c.Host, c.InternalPort)
+	}
+
+	return &c, nil
 }
 
 func (c *Config) Store() core.Config {
@@ -78,12 +84,16 @@ func (c *Config) Store() core.Config {
 	}
 }
 
+func (c *Config) JoinTo() string {
+	return *joinTo
+}
+
 func (c *Config) Raft() raft.Config {
 	return raft.Config{
-		RealAddress:       fmt.Sprintf("%s:%s", c.Host, c.InternalPort),
+		RealAddress:       c.address(c.Host, c.InternalPort),
 		AdvertisedAddress: c.RaftConfig.Advertise,
 		NodeID:            c.RaftConfig.NodeID,
-		DataLocation:      c.RaftConfig.DataLocation,
+		DataLocation:      c.DataPath,
 		SnapshotsRetain:   c.RaftConfig.SnapshotsRetain,
 		MaxPool:           c.RaftConfig.MaxPool,
 		Timeout:           c.RaftConfig.Timeout,
@@ -93,15 +103,16 @@ func (c *Config) Raft() raft.Config {
 func (c *Config) ClusterNode() raft.ClusterNodeConfig {
 	return raft.ClusterNodeConfig{
 		ID:                raft.ServerID(c.RaftConfig.NodeID),
-		RealAddress:       raft.ServerAddress(c.RaftConfig.Advertise),
+		RealAddress:       raft.ServerAddress(c.address(c.Host, c.InternalPort)),
 		AdvertisedAddress: raft.ServerAddress(c.RaftConfig.Advertise),
+		BootstrapCluster:  *joinTo == "",
 	}
 }
 
 func (c *Config) GRPCServer() servers.Config {
 	return servers.Config{
-		Address: fmt.Sprintf("%s:%s", c.Host, c.PublicPort),
-		Timeout: c.GRPCServerConfig.Timeout,
+		Address:           c.address(c.Host, c.PublicPort),
+		ConnectionTimeout: c.GRPCServerConfig.ConnectionTimeout,
 	}
 }
 
@@ -110,7 +121,7 @@ func (c *Config) choose(target *string, flag *string) {
 		return
 	}
 
-	if *target == "" {
+	if *flag != "" {
 		*target = *flag
 	}
 }
@@ -128,4 +139,8 @@ func (c *Config) expandEnv() error {
 	}
 
 	return nil
+}
+
+func (c *Config) address(host, port string) string {
+	return fmt.Sprintf("%s:%s", host, port)
 }

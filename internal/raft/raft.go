@@ -5,7 +5,10 @@ import (
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"io"
+	"kvstore/internal/sl"
+	"log/slog"
 	"net"
+	"path/filepath"
 	"time"
 )
 
@@ -19,16 +22,20 @@ type Config struct {
 	Timeout           time.Duration
 }
 
-func New(fsm raft.FSM, out io.Writer, conf Config) (*raft.Raft, error) {
+func New(logger *slog.Logger, fsm raft.FSM, out io.Writer, conf Config) (*raft.Raft, error) {
+	logger = logger.With(sl.Component("raft.New"))
+
+	logger.Debug("creating raft instance", sl.Conf(conf))
+
 	raftConfig := raft.DefaultConfig()
 	raftConfig.LocalID = ServerID(conf.NodeID)
 
-	logStore, err := raftboltdb.NewBoltStore(conf.DataLocation)
+	logStore, err := raftboltdb.NewBoltStore(filepath.Join(conf.DataLocation, "log.db"))
 	if err != nil {
-		return nil, fmt.Errorf("cannnot create raft logger store: %v", err)
+		return nil, fmt.Errorf("cannnot create raft logg store: %v", err)
 	}
 
-	stableStore, err := raftboltdb.NewBoltStore(conf.DataLocation)
+	stableStore, err := raftboltdb.NewBoltStore(filepath.Join(conf.DataLocation, "stable.db"))
 	if err != nil {
 		return nil, fmt.Errorf("cannot create raft stable store: %v", err)
 	}
@@ -52,6 +59,8 @@ func New(fsm raft.FSM, out io.Writer, conf Config) (*raft.Raft, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot create raft.Raft r: %v", err)
 	}
+
+	logger.Debug("created successfully", sl.Conf(conf))
 
 	return r, nil
 }

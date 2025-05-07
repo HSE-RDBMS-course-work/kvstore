@@ -7,7 +7,7 @@ ENV GOOS linux
 
 WORKDIR /build
 
-COPY ./src/go.mod ./src/go.sum ./
+COPY go.mod ./src/go.sum ./
 RUN go mod download
 
 COPY ./src .

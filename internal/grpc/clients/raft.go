@@ -2,11 +2,14 @@ package clients
 
 import (
 	"context"
+	"errors"
 	pb "github.com/HSE-RDBMS-course-work/kvstore-proto/gen/go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"kvstore/internal/raft"
 )
+
+var ErrAddressIsEmpty = errors.New("address is nil")
 
 type RaftClient struct {
 	client pb.RaftClient
@@ -14,7 +17,7 @@ type RaftClient struct {
 
 func NewRaftClient(addr string) (*RaftClient, error) {
 	if addr == "" {
-		return nil, nil // address of leader was not pass so leader does not exist
+		return nil, ErrAddressIsEmpty
 	}
 
 	opts := []grpc.DialOption{ //todo

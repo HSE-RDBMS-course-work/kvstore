@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"kvstore/internal/sl"
 	"log/slog"
 	"maps"
 	"sync"
@@ -41,6 +42,11 @@ func NewStore(logger *slog.Logger, conf Config) (*Store, error) {
 	if logger == nil {
 		return nil, errors.New("logger required")
 	}
+
+	logger = logger.With(sl.Component("core.Store"))
+
+	logger.Debug("creating new store", sl.Conf(conf))
+
 	if conf.CleanInterval <= 0 {
 		conf.CleanInterval = infinity
 	}
@@ -50,6 +56,8 @@ func NewStore(logger *slog.Logger, conf Config) (*Store, error) {
 	if conf.InitialCapacity <= 0 {
 		conf.InitialCapacity = defaultCap
 	}
+
+	logger.Debug("created successfully", sl.Conf(conf))
 
 	return &Store{
 		expirations:      make(map[Key]time.Time, conf.InitialCapacity),

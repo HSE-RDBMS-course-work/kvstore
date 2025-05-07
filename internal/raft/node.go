@@ -121,7 +121,7 @@ func (r *ClusterNode) bootstrapCluster(ctx context.Context) error {
 		Servers: []raft.Server{
 			{
 				ID:      r.id,
-				Address: r.realAddress,
+				Address: r.advertisedAddress,
 			},
 		},
 	})

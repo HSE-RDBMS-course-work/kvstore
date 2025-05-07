@@ -60,7 +60,7 @@ func main() {
 		return
 	}
 
-	r, err := raft.New(logger, fsm, os.Stderr, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
+	r, recovered, err := raft.New(logger, fsm, os.Stderr, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
 	if err != nil {
 		cl.Error("cannot create raft instance", sl.Error(err))
 		return
@@ -99,6 +99,9 @@ func main() {
 	kvstoreServer.RegisterTo(srv.Server)
 
 	go func() { //todo нормально сделать
+		if recovered {
+			return
+		}
 		if err := clusterNode.Run(ctx); err != nil {
 			cl.Error("cannot start cluster node", sl.Error(err))
 			stop()

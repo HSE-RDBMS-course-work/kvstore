@@ -47,7 +47,7 @@ func Read() (*Config, error) {
 
 	vp.SetConfigFile(*configPath)
 	if err := vp.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("cannot read config file (%s): %w", configPath, err)
+		return nil, fmt.Errorf("cannot read config file (%s): %w", *configPath, err)
 	}
 
 	var c Config

@@ -44,4 +44,4 @@ three-docker:
 	@docker compose up -d
 
 three-docker-clean:
-	@docker compose down --volumes
+	@docker compose down --volumes --rmi all

@@ -16,11 +16,10 @@ import (
 )
 
 //todo repositry https://github.com/otoolep/hraftd
-//todo grpc https://github.com/Jille/raft-grpc-example/blob/master/main.go
-//todo package for getters with no "Get"
-//todo логирование во всех модулях проверить как работет заинджектить свое
 //todo нормальный конфиг
 //todo прокинуть volume и протестить
+
+//todo авторизация, ttl, healthcheck, рефактор raft.New, логирование во всех модулях проверить как работет заинджектить свое (slog.NewLog)
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

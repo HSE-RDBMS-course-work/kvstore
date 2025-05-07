@@ -8,7 +8,7 @@ services:
       KVSTORE_INTERNAL_PORT: 3000
       KVSTORE_USERNAME: admin
       KVSTORE_PASSWORD: password
-      KVSTORE_ADVERTISED_ADDRESS: node1:8090
+      KVSTORE_ADVERTISED_ADDRESS: node1:3000
     volumes:
       - node1_data:/home/appuser/data
     ports:
@@ -23,7 +23,7 @@ services:
       KVSTORE_INTERNAL_PORT: 3000
       KVSTORE_USERNAME: admin
       KVSTORE_PASSWORD: password
-      KVSTORE_ADVERTISED_ADDRESS: node2:8092
+      KVSTORE_ADVERTISED_ADDRESS: node2:3000
     volumes:
       - node2_data:/home/appuser/data
     ports:
@@ -41,7 +41,7 @@ services:
       KVSTORE_INTERNAL_PORT: 3000
       KVSTORE_USERNAME: admin
       KVSTORE_PASSWORD: password
-      KVSTORE_ADVERTISED_ADDRESS: node3:8093
+      KVSTORE_ADVERTISED_ADDRESS: node3:3000
     volumes:
       - node3_data:/home/appuser/data
     ports:

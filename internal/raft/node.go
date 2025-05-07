@@ -3,6 +3,7 @@ package raft
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/hashicorp/raft"
 	"kvstore/internal/sl"
 	"log/slog"
@@ -109,10 +110,13 @@ func (r *ClusterNode) Run(ctx context.Context) error {
 
 func (r *ClusterNode) Shutdown() error {
 	r.logger.Info("shutting down")
+
 	if err := r.raft.Shutdown().Error(); err != nil {
 		return err
 	}
+
 	r.logger.Info("shut down gracefully")
+
 	return nil
 }
 
@@ -125,13 +129,21 @@ func (r *ClusterNode) bootstrapCluster(ctx context.Context) error {
 			},
 		},
 	})
+	if err := future.Error(); err != nil {
+		return fmt.Errorf("cannot bootstrap cluster: %w", err)
+	}
 
-	return future.Error() //todo use context to catch timeout
+	return nil //todo use context to catch timeout
 }
 
 func (r *ClusterNode) joinToCluster(ctx context.Context) error {
-	return r.existLeader.JoinToCluster(ctx, JoinToClusterIn{
+	err := r.existLeader.JoinToCluster(ctx, JoinToClusterIn{
 		JoinerID:      r.id,
 		JoinerAddress: r.advertisedAddress,
 	})
+	if err != nil {
+		return fmt.Errorf("cannot join to cluster: %w", err)
+	}
+
+	return nil
 }

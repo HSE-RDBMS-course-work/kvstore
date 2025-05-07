@@ -39,3 +39,9 @@ three-tmux:
 three-tmux-clean:
 	@tmux kill-session -t $(THREE_TMUX_SESSION)
 	@rm -r $(DATA_THREE)
+
+three-docker:
+	@docker compose up -d
+
+three-docker-clean:
+	@docker compose down --volumes

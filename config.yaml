@@ -1,9 +1,8 @@
-host: ${KVSTORE_USER}
+host: ${KVSTORE_HOST}
 public_port: ${KVSTORE_PUBLIC_PORT}
 internal_port: ${KVSTORE_INTERNAL_PORT}
 username: ${KVSTORE_USERNAME}
 password: ${KVSTORE_PASSWORD}
-join_to: ${JOIN_TO}
 data_path: ${KVSTORE_DATA}
 storage:
   clean_interval: 5m

@@ -32,7 +32,7 @@ func New(logger *slog.Logger, fsm raft.FSM, out io.Writer, conf Config) (*raft.R
 
 	logStore, err := raftboltdb.NewBoltStore(filepath.Join(conf.DataLocation, "log.db"))
 	if err != nil {
-		return nil, false, fmt.Errorf("cannnot create raft logg store: %v", err)
+		return nil, false, fmt.Errorf("cannnot create raft log store: %v", err)
 	}
 
 	stableStore, err := raftboltdb.NewBoltStore(filepath.Join(conf.DataLocation, "stable.db"))

@@ -1,0 +1,56 @@
+services:
+  node1:
+    container_name: node1
+    build: .
+    environment:
+      KVSTORE_HOST: 0.0.0.0
+      KVSTORE_PUBLIC_PORT: 8090
+      KVSTORE_INTERNAL_PORT: 3000
+      KVSTORE_USERNAME: admin
+      KVSTORE_PASSWORD: password
+      KVSTORE_ADVERTISED_ADDRESS: node1:8090
+    volumes:
+      - node1_data:/home/appuser/data
+    ports:
+      - "8090:8090"
+
+  node2:
+    container_name: node2
+    build: .
+    environment:
+      KVSTORE_HOST: 0.0.0.0
+      KVSTORE_PUBLIC_PORT: 8090
+      KVSTORE_INTERNAL_PORT: 3000
+      KVSTORE_USERNAME: admin
+      KVSTORE_PASSWORD: password
+      KVSTORE_ADVERTISED_ADDRESS: node2:8092
+    volumes:
+      - node2_data:/home/appuser/data
+    ports:
+      - "8092:8090"
+    depends_on:
+      - node1
+    command: ["-join-to", "node1:8090"]
+
+  node3:
+    container_name: node3
+    build: .
+    environment:
+      KVSTORE_HOST: 0.0.0.0
+      KVSTORE_PUBLIC_PORT: 8090
+      KVSTORE_INTERNAL_PORT: 3000
+      KVSTORE_USERNAME: admin
+      KVSTORE_PASSWORD: password
+      KVSTORE_ADVERTISED_ADDRESS: node3:8093
+    volumes:
+      - node3_data:/home/appuser/data
+    ports:
+      - "8093:8090"
+    depends_on:
+      - node1
+    command: ["-join-to", "node1:8090"]
+
+volumes:
+  node1_data:
+  node2_data:
+  node3_data:

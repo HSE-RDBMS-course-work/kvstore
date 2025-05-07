@@ -7,10 +7,12 @@ ENV GOOS linux
 
 WORKDIR /build
 
-COPY go.mod ./src/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY ./src .
+COPY cmd cmd
+COPY internal internal
+COPY config.yaml /app/config.yaml
 RUN go build -ldflags="-s -w" -o /app/app cmd/main.go
 
 FROM alpine AS runner
@@ -20,8 +22,14 @@ RUN addgroup -S appgroup \
 
 USER appuser
 
-WORKDIR /home/appuser/app
+WORKDIR /home/appuser/
 
 COPY --from=builder /app/app app
+COPY --from=builder /app/config.yaml config.yaml
 
-ENTRYPOINT ["./app", "--config-path=./config.yaml"]
+RUN mkdir -p /home/appuser/data \
+    && chown -R appuser:appgroup /home/appuser/data
+
+ENV KVSTORE_DATA=/home/appuser/data
+
+ENTRYPOINT ["./app", "-config", "/home/appuser/config.yaml"]

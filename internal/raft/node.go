@@ -98,8 +98,12 @@ func (r *ClusterNode) AcceptJoin(ctx context.Context, in JoinToClusterIn) error 
 	return nil
 }
 
-func (r *ClusterNode) Run(ctx context.Context) error {
+func (r *ClusterNode) Run(ctx context.Context, recovered bool) error {
 	r.logger.Info("starting listening", slog.String("address", string(r.realAddress)))
+
+	if recovered && r.isFirstNode {
+		return nil
+	}
 
 	if r.isFirstNode {
 		return r.bootstrapCluster(ctx)

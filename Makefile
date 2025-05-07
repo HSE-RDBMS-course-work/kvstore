@@ -37,8 +37,8 @@ three-tmux:
 	@tmux attach -t $(THREE_TMUX_SESSION)
 
 three-tmux-clean:
-	@tmux kill-session -t $(THREE_TMUX_SESSION)
-	@rm -r $(DATA_THREE)
+	@rm -rf $(DATA_THREE)
+	@tmux kill-session -tf $(THREE_TMUX_SESSION)
 
 three-docker:
 	@docker compose up -d

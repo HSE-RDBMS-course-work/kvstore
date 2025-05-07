@@ -98,10 +98,7 @@ func main() {
 	kvstoreServer.RegisterTo(srv.Server)
 
 	go func() { //todo нормально сделать
-		if recovered {
-			return
-		}
-		if err := clusterNode.Run(ctx); err != nil {
+		if err := clusterNode.Run(ctx, recovered); err != nil {
 			cl.Error("cannot start cluster node", sl.Error(err))
 			stop()
 		}

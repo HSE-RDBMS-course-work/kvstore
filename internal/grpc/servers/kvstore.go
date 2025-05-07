@@ -82,6 +82,9 @@ func (s *KVStoreServer) get(ctx context.Context, in *pb.GetIn, get getFn) (*pb.G
 	key := core.Key(in.GetKey())
 
 	value, err := get(ctx, key)
+	if errors.Is(err, raft.ErrIsNotLeader) {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
 	if errors.Is(err, core.ErrNoKey) {
 		return nil, status.Errorf(codes.NotFound, "there is no %s", key)
 	}

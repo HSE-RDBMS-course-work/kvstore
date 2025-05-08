@@ -126,6 +126,8 @@ func (r *ClusterNode) bootstrapCluster(ctx context.Context) error {
 		return fmt.Errorf("cannot bootstrap cluster: %w", err)
 	}
 
+	r.logger.Debug("bootstrap cluster successfully")
+
 	return nil //todo use context to catch timeout
 }
 
@@ -137,6 +139,8 @@ func (r *ClusterNode) joinToCluster(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("cannot join to cluster: %w", err)
 	}
+
+	r.logger.Debug("join to cluster successfully")
 
 	return nil
 }

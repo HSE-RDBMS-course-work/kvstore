@@ -60,7 +60,7 @@ func New(logger *slog.Logger, hcLogger hclog.Logger, fsm raft.FSM, conf Config) 
 		return nil, false, fmt.Errorf("cannot check existing state: %v", err)
 	}
 
-	if hasState {
+	if hasState { //todo это должно быть в другом месте
 		err := raft.RecoverCluster(raftConfig, fsm, logStore, stableStore, snapshots, transport, raft.Configuration{
 			Servers: []raft.Server{
 				{
@@ -72,6 +72,7 @@ func New(logger *slog.Logger, hcLogger hclog.Logger, fsm raft.FSM, conf Config) 
 		if err != nil {
 			return nil, false, fmt.Errorf("cannot recover cluster: %v", err)
 		}
+		logger.Debug("recovered cluster node successfully")
 	}
 
 	r, err := raft.NewRaft(raftConfig, fsm, logStore, stableStore, snapshots, transport)

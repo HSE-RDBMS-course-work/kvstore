@@ -16,14 +16,10 @@ import (
 	"os/signal"
 )
 
-//todo repositry https://github.com/otoolep/hraftd
-//todo нормальный конфиг
-//todo прокинуть volume и протестить
+//https://github.com/otoolep/hraftd
 
-//todo авторизация, ttl, healthcheck, рефактор raft.New, логирование во всех модулях проверить как работет заинджектить свое (slog.NewLog)
-//todo нормальные логи когда бусттрапа подключения и востановления
-//todo передавать таймаут для выборов и перемиеновать raft.Timeout
-//todo raft: not part of stable configuration, aborting election всегда когда выключаю лидера
+//todo авторизация, ttl, healthcheck,
+// рефактор raft.New todo передавать таймаут для выборов и перемиеновать raft.Timeout
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

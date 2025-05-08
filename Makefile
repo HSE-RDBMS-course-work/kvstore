@@ -36,6 +36,9 @@ three-tmux:
 	@tmux select-layout tiled
 	@tmux attach -t $(THREE_TMUX_SESSION)
 
+three-restart-leader:
+	@go run $(MAIN) -config $(CONFIG) -data $(DATA_THREE)/1
+
 three-tmux-clean:
 	@rm -rf $(DATA_THREE)
 	@tmux kill-session -tf $(THREE_TMUX_SESSION)

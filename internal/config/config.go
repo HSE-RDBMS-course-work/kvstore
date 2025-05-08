@@ -66,11 +66,11 @@ func Read() (*Config, error) {
 	c.choose(&c.Password, password)
 	c.choose(&c.RaftConfig.Advertise, advertise) //todo move this field to root of the config
 
-	c.RaftConfig.NodeID = c.RaftConfig.Advertise
-
 	if c.RaftConfig.Advertise == "" {
 		c.RaftConfig.Advertise = c.address("localhost", c.InternalPort)
 	}
+
+	c.RaftConfig.NodeID = c.RaftConfig.Advertise
 
 	return &c, nil
 }

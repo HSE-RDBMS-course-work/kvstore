@@ -1,31 +1,20 @@
 package servers
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"kvstore/internal/grpc/servers/interceptors"
 	"kvstore/internal/sl"
 	"log/slog"
 	"net"
-	"runtime/debug"
 	"time"
 )
 
-type slogWrapper struct {
-	log *slog.Logger
-}
-
-func (sw *slogWrapper) Log(ctx context.Context, level logging.Level, msg string, fields ...any) {
-	sw.log.Log(ctx, slog.Level(level), msg, fields)
-}
-
 type Config struct {
 	Address           string
+	Username          string
+	Password          string
 	ConnectionTimeout time.Duration
 }
 
@@ -39,25 +28,24 @@ func New(logger *slog.Logger, conf Config) (*Server, error) {
 	if logger == nil {
 		return nil, errors.New("logger required")
 	}
-
-	recoveryLogger := logger.With(sl.Component("grpc.Recovery"))
-
-	recoveryFunc := func(p any) (err error) {
-		recoveryLogger.Error("panic while handling grpc request",
-			sl.Panic(p),
-			slog.String("trace", string(debug.Stack())),
-		)
-		return status.Error(codes.Internal, "internal servers error")
+	if conf.Address == "" {
+		return nil, errors.New("address required")
+	}
+	if conf.Username == "" {
+		return nil, errors.New("username required")
+	}
+	if conf.Password == "" {
+		return nil, errors.New("password required")
+	}
+	if conf.ConnectionTimeout <= 0 {
+		conf.ConnectionTimeout = 0
 	}
 
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandler(recoveryFunc),
-			),
-			logging.UnaryServerInterceptor(
-				&slogWrapper{log: logger},
-			),
+			interceptors.NewRecovery(logger),
+			interceptors.NewLogging(logger),
+			interceptors.NewAuth(conf.Username, conf.Password),
 		),
 		grpc.ConnectionTimeout(conf.ConnectionTimeout),
 	)

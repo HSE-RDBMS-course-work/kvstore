@@ -171,6 +171,8 @@ func (c *Config) ClusterNode() raft.ClusterNodeConfig {
 func (c *Config) GRPCServer() servers.Config {
 	return servers.Config{
 		Address:           c.address(c.Host, c.PublicPort),
+		Username:          c.Username,
+		Password:          c.Password,
 		ConnectionTimeout: c.GRPCServerConfig.ConnectionTimeout,
 	}
 }

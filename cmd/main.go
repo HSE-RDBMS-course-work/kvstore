@@ -95,7 +95,7 @@ func main() {
 	}
 	kvstoreServer.RegisterTo(srv.Server)
 
-	go func() { //todo нормально сделать
+	go func() {
 		if err := clusterNode.Run(ctx, recovered); err != nil {
 			cl.Error("cannot start cluster node", sl.Error(err))
 			stop()
@@ -107,6 +107,10 @@ func main() {
 			cl.Error("cannot start server", sl.Error(err))
 			stop()
 		}
+	}()
+
+	go func() {
+		distributedStore.RunCleaning(ctx)
 	}()
 
 	<-ctx.Done()

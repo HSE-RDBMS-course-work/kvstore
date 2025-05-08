@@ -113,12 +113,15 @@ func (s *Store) Expired(ctx context.Context) <-chan Key {
 	ch := make(chan Key)
 	timer := time.NewTicker(s.cleanInterval)
 
+	s.logger.Info("start producing expired keys job")
+
 	go func() {
 		defer close(ch)
 
 		for {
 			select {
 			case <-ctx.Done():
+				s.logger.Info("producing expired keys was cancelled by context")
 				return
 			case <-timer.C:
 				s.clean(ctx, ch)
@@ -136,6 +139,8 @@ func (s *Store) clean(ctx context.Context, res chan<- Key) {
 	ctx, cancel := context.WithTimeout(ctx, s.maxCleanDuration)
 	defer cancel()
 
+	s.logger.Debug("start cleaning interval", slog.Duration("duration", s.maxCleanDuration))
+
 	for k, expiration := range s.expirations {
 		if !time.Now().After(expiration) {
 			continue
@@ -144,6 +149,7 @@ func (s *Store) clean(ctx context.Context, res chan<- Key) {
 		select {
 		case res <- k:
 		case <-ctx.Done():
+			s.logger.Debug("end cleaning interval", slog.Duration("duration", s.maxCleanDuration))
 			return
 		}
 	}

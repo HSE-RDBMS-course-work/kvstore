@@ -35,7 +35,7 @@ type command struct {
 	TTL   time.Duration `json:"ttl"`
 }
 
-func (cmd *command) LogValue() slog.Attr {
+func (cmd *command) LogAttr() slog.Attr {
 	return slog.Group(
 		"command",
 		slog.String("op", string(cmd.Op)),

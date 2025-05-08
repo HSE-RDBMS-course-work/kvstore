@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/hashicorp/raft"
 	"kvstore/internal/core"
 	"kvstore/internal/sl"
@@ -48,7 +49,7 @@ func (s *Store) Get(ctx context.Context, key core.Key) (*core.Value, error) {
 }
 
 func (s *Store) ConsistentGet(ctx context.Context, key core.Key) (*core.Value, error) {
-	if !s.isLeader() {
+	if s.raft.State() != raft.Leader {
 		return nil, ErrIsNotLeader
 	}
 
@@ -56,7 +57,7 @@ func (s *Store) ConsistentGet(ctx context.Context, key core.Key) (*core.Value, e
 }
 
 func (s *Store) Put(ctx context.Context, key core.Key, value core.Value, ttl time.Duration) error {
-	if !s.isLeader() {
+	if s.raft.State() != raft.Leader {
 		return ErrIsNotLeader
 	}
 
@@ -91,10 +92,6 @@ func (s *Store) Delete(ctx context.Context, key core.Key) error {
 	return s.apply(ctx, cmd)
 }
 
-func (s *Store) isLeader() bool {
-	return s.raft.State() == raft.Leader
-}
-
 func (s *Store) apply(ctx context.Context, cmd command) error {
 	bytes, err := json.Marshal(cmd)
 	if err != nil {
@@ -108,5 +105,29 @@ func (s *Store) apply(ctx context.Context, cmd command) error {
 		timeout = time.Until(deadline)
 	}
 
-	return s.raft.Apply(bytes, timeout).Error()
+	err = s.raft.Apply(bytes, timeout).Error()
+	if err != nil {
+		return fmt.Errorf("appling log to other nodes: %w", err)
+	}
+
+	s.logger.Debug("applied command", cmd.LogAttr())
+
+	return nil
+}
+
+func (s *Store) RunCleaning(ctx context.Context) {
+	for {
+		if !<-s.raft.LeaderCh() {
+			continue
+		}
+
+		for key := range s.store.Expired(ctx) {
+			if s.raft.State() != raft.Leader {
+				break
+			}
+			if err := s.Delete(ctx, key); err != nil {
+				s.logger.Warn("failed to delete expired key")
+			}
+		}
+	}
 }

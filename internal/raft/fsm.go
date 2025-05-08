@@ -36,7 +36,7 @@ func NewFSM(logger *slog.Logger, store kvstore) (*FSM, error) {
 	}, nil
 }
 
-// Apply applies logs from leader to replicas
+// Apply applies logs from leader to replicas or from snapshots
 // for more info check docs for raft.FSM
 func (fsm *FSM) Apply(log *raft.Log) any {
 	var cmd command
@@ -45,7 +45,7 @@ func (fsm *FSM) Apply(log *raft.Log) any {
 		return err
 	}
 
-	fsm.logger.Info("applying command", cmd)
+	fsm.logger.Debug("applying command", cmd.LogAttr())
 
 	var err error
 	switch cmd.Op {

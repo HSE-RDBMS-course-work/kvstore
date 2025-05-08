@@ -18,7 +18,7 @@ import (
 
 //https://github.com/otoolep/hraftd
 
-//todo авторизация, ttl, healthcheck,
+//todo авторизация, healthcheck,
 // рефактор raft.New todo передавать таймаут для выборов и перемиеновать raft.Timeout
 
 func main() {

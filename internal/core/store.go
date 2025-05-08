@@ -24,9 +24,9 @@ const (
 )
 
 type Config struct {
-	CleanInterval    time.Duration
-	MaxCleanDuration time.Duration
-	InitialCapacity  int64
+	CleanInterval   time.Duration
+	CleanDuration   time.Duration
+	InitialCapacity int64
 }
 
 type Store struct {
@@ -50,11 +50,15 @@ func NewStore(logger *slog.Logger, conf Config) (*Store, error) {
 	if conf.CleanInterval <= 0 {
 		conf.CleanInterval = infinity
 	}
-	if conf.MaxCleanDuration <= 0 {
-		conf.MaxCleanDuration = infinity
+	if conf.CleanDuration <= 0 {
+		conf.CleanDuration = infinity
 	}
 	if conf.InitialCapacity <= 0 {
 		conf.InitialCapacity = defaultCap
+	}
+
+	if conf.CleanInterval < conf.CleanDuration {
+		return nil, errors.New("clean_interval cannot be less than clean_duration")
 	}
 
 	logger.Debug("created successfully", sl.Conf(conf))
@@ -65,7 +69,7 @@ func NewStore(logger *slog.Logger, conf Config) (*Store, error) {
 		mu:               new(sync.RWMutex),
 		logger:           logger,
 		cleanInterval:    conf.CleanInterval,
-		maxCleanDuration: conf.MaxCleanDuration,
+		maxCleanDuration: conf.CleanDuration,
 	}, nil
 }
 
@@ -135,13 +139,16 @@ func (s *Store) Expired(ctx context.Context) <-chan Key {
 }
 
 func (s *Store) clean(ctx context.Context, res chan<- Key) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	ctx, cancel := context.WithTimeout(ctx, s.maxCleanDuration)
 	defer cancel()
 
 	s.logger.Debug("start cleaning interval", slog.Duration("duration", s.maxCleanDuration))
+	defer func() {
+		s.logger.Debug("end cleaning interval", slog.Duration("duration", s.maxCleanDuration))
+	}()
 
 	for k, expiration := range s.expirations {
 		if !time.Now().After(expiration) {
@@ -149,10 +156,9 @@ func (s *Store) clean(ctx context.Context, res chan<- Key) {
 		}
 
 		select {
-		case res <- k:
 		case <-ctx.Done():
-			s.logger.Debug("end cleaning interval", slog.Duration("duration", s.maxCleanDuration))
 			return
+		case res <- k:
 		}
 	}
 }

@@ -7,8 +7,8 @@ data_path: ${KVSTORE_DATA}
 logger:
   level: 0
 storage:
-  clean_interval: 5m
-  max_clean_duration: 0.5s
+  clean_interval: 1m
+  clean_duration: 0.1s
   initial_capacity: 10_000
 grpc_server:
   connection_timeout: 5s

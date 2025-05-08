@@ -36,7 +36,7 @@ type Logger struct {
 
 type Store struct {
 	CleanInterval    time.Duration `mapstructure:"clean_interval"`
-	MaxCleanDuration time.Duration `mapstructure:"max_clean_duration"`
+	MaxCleanDuration time.Duration `mapstructure:"clean_duration"`
 	InitialCapacity  int64         `mapstructure:"initial_capacity"`
 }
 
@@ -137,9 +137,9 @@ func (c *Config) HashicorpLogger() *hclog.LoggerOptions {
 
 func (c *Config) Store() core.Config {
 	return core.Config{
-		CleanInterval:    c.StoreConfig.CleanInterval,
-		MaxCleanDuration: c.StoreConfig.MaxCleanDuration,
-		InitialCapacity:  c.StoreConfig.InitialCapacity,
+		CleanInterval:   c.StoreConfig.CleanInterval,
+		CleanDuration:   c.StoreConfig.MaxCleanDuration,
+		InitialCapacity: c.StoreConfig.InitialCapacity,
 	}
 }
 

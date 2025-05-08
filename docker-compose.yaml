@@ -30,7 +30,7 @@ services:
       - "8091:8090"
     depends_on:
       - node1
-    command: ["-join-to", "node1:8090"]
+    command: ["-join-to", "node1:8090", "-verbose"]
 
   node3:
     container_name: node3
@@ -48,7 +48,7 @@ services:
       - "8092:8090"
     depends_on:
       - node1
-    command: ["-join-to", "node1:8090"]
+    command: ["-join-to", "node1:8090", "-verbose"]
 
 volumes:
   node1_data:

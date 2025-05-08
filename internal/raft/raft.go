@@ -2,9 +2,9 @@ package raft
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
-	"io"
 	"kvstore/internal/sl"
 	"log/slog"
 	"net"
@@ -22,13 +22,13 @@ type Config struct {
 	Timeout           time.Duration
 }
 
-func New(logger *slog.Logger, fsm raft.FSM, out io.Writer, conf Config) (*raft.Raft, bool, error) {
+func New(logger *slog.Logger, hcLogger hclog.Logger, fsm raft.FSM, conf Config) (*raft.Raft, bool, error) {
 	logger = logger.With(sl.Component("raft.New"))
-
 	logger.Debug("creating raft instance", sl.Conf(conf))
 
 	raftConfig := raft.DefaultConfig()
 	raftConfig.LocalID = ServerID(conf.NodeID)
+	raftConfig.Logger = hcLogger
 
 	logStore, err := raftboltdb.NewBoltStore(filepath.Join(conf.DataLocation, "log.db"))
 	if err != nil {
@@ -40,7 +40,7 @@ func New(logger *slog.Logger, fsm raft.FSM, out io.Writer, conf Config) (*raft.R
 		return nil, false, fmt.Errorf("cannot create raft stable store: %v", err)
 	}
 
-	snapshots, err := raft.NewFileSnapshotStore(conf.DataLocation, conf.SnapshotsRetain, out)
+	snapshots, err := raft.NewFileSnapshotStoreWithLogger(conf.DataLocation, conf.SnapshotsRetain, hcLogger)
 	if err != nil {
 		return nil, false, fmt.Errorf("cannot create snapshot store: %v", err)
 	}
@@ -50,7 +50,7 @@ func New(logger *slog.Logger, fsm raft.FSM, out io.Writer, conf Config) (*raft.R
 		return nil, false, fmt.Errorf("cannot resolve advertised address: %v", err)
 	}
 
-	transport, err := raft.NewTCPTransport(conf.RealAddress, advertisedAddr, conf.MaxPool, conf.Timeout, out)
+	transport, err := raft.NewTCPTransportWithLogger(conf.RealAddress, advertisedAddr, conf.MaxPool, conf.Timeout, hcLogger)
 	if err != nil {
 		return nil, false, fmt.Errorf("cannot create transport: %v", err)
 	}

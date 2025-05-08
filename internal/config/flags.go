@@ -10,6 +10,7 @@ var (
 			"(You must not provide it if you run it with no custom DNS like docker DNS. "+
 			"And it must be either localhost or domain name)",
 	)
+	verbose    = flag.Bool("verbose", false, "Verbose output")
 	configPath = flag.String("config", "", "Path to configuration file")
 	dataPath   = flag.String("data", "", "Path to directory with kvstore data")
 	username   = flag.String("username", "", "Username to use for authentication")

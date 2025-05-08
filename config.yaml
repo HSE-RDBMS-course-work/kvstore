@@ -4,6 +4,8 @@ internal_port: ${KVSTORE_INTERNAL_PORT}
 username: ${KVSTORE_USERNAME}
 password: ${KVSTORE_PASSWORD}
 data_path: ${KVSTORE_DATA}
+logger:
+  level: 0
 storage:
   clean_interval: 5m
   max_clean_duration: 0.5s

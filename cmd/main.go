@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/go-hclog"
 	"kvstore/internal/config"
 	"kvstore/internal/core"
 	"kvstore/internal/grpc/clients"
@@ -33,11 +34,7 @@ func main() {
 		log.Fatalf("cannot read config file: %s", err)
 	}
 
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     slog.LevelDebug,
-		AddSource: false,
-	})
-	logger := slog.New(handler)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, conf.Logger()))
 
 	cl := logger.With(sl.Component("di"))
 
@@ -62,7 +59,9 @@ func main() {
 		return
 	}
 
-	r, recovered, err := raft.New(logger, fsm, os.Stderr, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
+	hcLogger := hclog.New(conf.HashicorpLogger())
+
+	r, recovered, err := raft.New(logger, hcLogger, fsm, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
 	if err != nil {
 		cl.Error("cannot create raft instance", sl.Error(err))
 		return

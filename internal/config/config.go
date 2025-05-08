@@ -3,13 +3,19 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/viper"
 	"kvstore/internal/core"
 	"kvstore/internal/grpc/servers"
 	"kvstore/internal/raft"
+	"kvstore/internal/sl"
+	"log/slog"
 	"os"
+	"strings"
 	"time"
 )
+
+const timeFormat = "2006-01-02 15:04:05"
 
 type Config struct {
 	Host             string     `mapstructure:"host"`
@@ -18,9 +24,14 @@ type Config struct {
 	Username         string     `mapstructure:"username"`
 	Password         string     `mapstructure:"password"`
 	DataPath         string     `mapstructure:"data_path"`
+	LoggerConfig     Logger     `mapstructure:"logger"`
 	StoreConfig      Store      `mapstructure:"storage"`
 	GRPCServerConfig GRPCServer `mapstructure:"grpc_server"`
 	RaftConfig       Raft       `mapstructure:"raft"`
+}
+
+type Logger struct {
+	Level int `mapstructure:"level"`
 }
 
 type Store struct {
@@ -73,6 +84,55 @@ func Read() (*Config, error) {
 	c.RaftConfig.NodeID = c.RaftConfig.Advertise
 
 	return &c, nil
+}
+
+func (c *Config) Logger() *slog.HandlerOptions {
+	level := slog.Level(c.LoggerConfig.Level)
+	if *verbose {
+		level = slog.LevelDebug
+	}
+
+	return &slog.HandlerOptions{
+		AddSource: false,
+		Level:     level,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr { //todo костыль чтобы slog был как hlog в идеалье реализовать hlog через slog
+			switch a.Key {
+			case slog.TimeKey:
+				return slog.Attr{Key: "@timestamp", Value: a.Value}
+			case slog.LevelKey:
+				return slog.Attr{Key: "@level", Value: slog.StringValue(strings.ToLower(a.Value.String()))}
+			case slog.MessageKey:
+				return slog.Attr{Key: "@message", Value: a.Value}
+			case sl.MessageComponent:
+				return slog.Attr{Key: "@module", Value: a.Value}
+			default:
+				return a
+			}
+		},
+	}
+}
+
+func (c *Config) HashicorpLogger() *hclog.LoggerOptions {
+	return &hclog.LoggerOptions{
+		Name:                     "hashicorp.Raft.(raft.internal)",
+		Level:                    hclog.Level(c.LoggerConfig.Level),
+		Output:                   os.Stderr,
+		Mutex:                    nil,
+		JSONFormat:               true,
+		JSONEscapeDisabled:       true,
+		IncludeLocation:          false,
+		AdditionalLocationOffset: 0,
+		TimeFormat:               "",
+		TimeFn:                   time.Now,
+		DisableTime:              false,
+		Color:                    0,
+		ColorHeaderOnly:          false,
+		ColorHeaderAndFields:     false,
+		Exclude:                  nil,
+		IndependentLevels:        false,
+		SyncParentLevel:          false,
+		SubloggerHook:            nil,
+	}
 }
 
 func (c *Config) Store() core.Config {

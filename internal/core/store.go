@@ -30,12 +30,12 @@ type Config struct {
 }
 
 type Store struct {
-	expirations      map[Key]time.Time
-	mp               map[Key]Value
-	mu               *sync.RWMutex
-	logger           *slog.Logger
-	cleanInterval    time.Duration
-	maxCleanDuration time.Duration
+	expirations   map[Key]time.Time
+	mp            map[Key]Value
+	mu            *sync.RWMutex
+	logger        *slog.Logger
+	cleanInterval time.Duration
+	cleanDuration time.Duration
 }
 
 func NewStore(logger *slog.Logger, conf Config) (*Store, error) {
@@ -64,12 +64,12 @@ func NewStore(logger *slog.Logger, conf Config) (*Store, error) {
 	logger.Debug("created successfully", sl.Conf(conf))
 
 	return &Store{
-		expirations:      make(map[Key]time.Time, conf.InitialCapacity),
-		mp:               make(map[Key]Value, conf.InitialCapacity),
-		mu:               new(sync.RWMutex),
-		logger:           logger,
-		cleanInterval:    conf.CleanInterval,
-		maxCleanDuration: conf.CleanDuration,
+		expirations:   make(map[Key]time.Time, conf.InitialCapacity),
+		mp:            make(map[Key]Value, conf.InitialCapacity),
+		mu:            new(sync.RWMutex),
+		logger:        logger,
+		cleanInterval: conf.CleanInterval,
+		cleanDuration: conf.CleanDuration,
 	}, nil
 }
 
@@ -142,12 +142,12 @@ func (s *Store) clean(ctx context.Context, res chan<- Key) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	ctx, cancel := context.WithTimeout(ctx, s.maxCleanDuration)
+	ctx, cancel := context.WithTimeout(ctx, s.cleanDuration)
 	defer cancel()
 
-	s.logger.Debug("start cleaning interval", slog.Duration("duration", s.maxCleanDuration))
+	s.logger.Debug("start cleaning interval", slog.Duration("duration", s.cleanDuration))
 	defer func() {
-		s.logger.Debug("end cleaning interval", slog.Duration("duration", s.maxCleanDuration))
+		s.logger.Debug("end cleaning interval", slog.Duration("duration", s.cleanDuration))
 	}()
 
 	for k, expiration := range s.expirations {
@@ -157,7 +157,7 @@ func (s *Store) clean(ctx context.Context, res chan<- Key) {
 
 		select {
 		case <-ctx.Done():
-			return
+			break
 		case res <- k:
 		}
 	}

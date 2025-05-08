@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"google.golang.org/grpc"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"kvstore/internal/grpc/servers/interceptors"
 	"kvstore/internal/sl"
 	"log/slog"
@@ -45,7 +46,9 @@ func New(logger *slog.Logger, conf Config) (*Server, error) {
 		grpc.ChainUnaryInterceptor(
 			interceptors.NewRecovery(logger),
 			interceptors.NewLogging(logger),
-			interceptors.NewAuth(conf.Username, conf.Password),
+			interceptors.NewAuth(conf.Username, conf.Password, []string{
+				healthpb.Health_Check_FullMethodName,
+			}),
 		),
 		grpc.ConnectionTimeout(conf.ConnectionTimeout),
 	)

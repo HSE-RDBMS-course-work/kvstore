@@ -17,6 +17,11 @@ RUN go build -ldflags="-s -w" -o /app/app cmd/main.go
 
 FROM alpine AS runner
 
+ARG ARCH=amd64
+
+ADD https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.38/grpc_health_probe-linux-${ARCH} /usr/local/bin/grpc-health-probe
+RUN chmod +x /usr/local/bin/grpc-health-probe
+
 RUN addgroup -S appgroup \
     && adduser -S appuser -G appgroup
 

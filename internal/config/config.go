@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/viper"
 	"kvstore/internal/core"
+	"kvstore/internal/grpc/clients"
 	"kvstore/internal/grpc/servers"
 	"kvstore/internal/raft"
 	"kvstore/internal/sl"
@@ -143,8 +144,12 @@ func (c *Config) Store() core.Config {
 	}
 }
 
-func (c *Config) JoinTo() string {
-	return *joinTo
+func (c *Config) ExistingRaftClient() clients.RaftClientConfig {
+	return clients.RaftClientConfig{
+		Address:  *joinTo,
+		Username: c.Username,
+		Password: c.Password,
+	}
 }
 
 func (c *Config) Raft() raft.Config {

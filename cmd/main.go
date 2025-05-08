@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/hashicorp/go-hclog"
 	"kvstore/internal/config"
-	"kvstore/internal/core"
+	core "kvstore/internal/core"
 	"kvstore/internal/grpc/clients"
 	"kvstore/internal/grpc/servers"
 	"kvstore/internal/raft"
@@ -40,7 +40,7 @@ func main() {
 		return
 	}
 
-	existLeader, err := clients.NewRaftClient(conf.JoinTo())
+	existLeader, err := clients.NewRaftClient(conf.ExistingRaftClient())
 	if errors.Is(err, clients.ErrAddressIsEmpty) {
 		cl.Warn("no cluster node to join to cluster was provided. It is ok if you want to bootstrap cluster")
 	}
@@ -94,6 +94,9 @@ func main() {
 		return
 	}
 	kvstoreServer.RegisterTo(srv.Server)
+
+	healthServer := servers.NewHealthServer()
+	healthServer.RegisterTo(srv.Server)
 
 	go func() {
 		if err := clusterNode.Run(ctx, recovered); err != nil {

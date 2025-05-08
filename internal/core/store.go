@@ -94,6 +94,8 @@ func (s *Store) Put(_ context.Context, key Key, value Value, ttl time.Duration) 
 
 	if ttl > 0 {
 		s.expirations[key] = time.Now().Add(ttl)
+	} else {
+		delete(s.expirations, key)
 	}
 
 	return nil

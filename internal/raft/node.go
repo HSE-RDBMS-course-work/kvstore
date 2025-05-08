@@ -79,20 +79,9 @@ func (r *ClusterNode) AcceptJoin(ctx context.Context, in JoinToClusterIn) error 
 		return ErrIsNotLeader
 	}
 
-	conf := r.raft.GetConfiguration()
-	if err := conf.Error(); err != nil {
+	err := r.raft.AddVoter(in.JoinerID, in.JoinerAddress, 0, 0).Error()
+	if err != nil {
 		return err
-	}
-
-	for _, srv := range conf.Configuration().Servers {
-		if srv.Address == in.JoinerAddress || srv.ID == in.JoinerID {
-			return newErrNodeExist(in.JoinerAddress, in.JoinerID)
-		}
-	}
-
-	addVoter := r.raft.AddVoter(in.JoinerID, in.JoinerAddress, 0, 0)
-	if addVoter.Error() != nil {
-		return addVoter.Error()
 	}
 
 	return nil

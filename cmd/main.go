@@ -20,6 +20,9 @@ import (
 //todo прокинуть volume и протестить
 
 //todo авторизация, ttl, healthcheck, рефактор raft.New, логирование во всех модулях проверить как работет заинджектить свое (slog.NewLog)
+//todo нормальные логи когда бусттрапа подключения и востановления
+//todo передавать таймаут для выборов и перемиеновать raft.Timeout
+//todo raft: not part of stable configuration, aborting election всегда когда выключаю лидера
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -106,14 +109,16 @@ func main() {
 
 	go func() {
 		if err := srv.Run(); err != nil {
-			logger.Error("cannot start server", sl.Error(err))
+			cl.Error("cannot start server", sl.Error(err))
 			stop()
 		}
 	}()
 
 	<-ctx.Done()
 
-	srv.Stop()
+	if err := srv.Shutdown(); err != nil {
+		cl.Error("cannot shutdown server", sl.Error(err))
+	}
 
 	if err := clusterNode.Shutdown(); err != nil {
 		logger.Error("cannot shutdown cluster", sl.Error(err))

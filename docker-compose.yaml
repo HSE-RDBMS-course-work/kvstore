@@ -27,7 +27,7 @@ services:
     volumes:
       - node2_data:/home/appuser/data
     ports:
-      - "8092:8090"
+      - "8091:8090"
     depends_on:
       - node1
     command: ["-join-to", "node1:8090"]
@@ -45,7 +45,7 @@ services:
     volumes:
       - node3_data:/home/appuser/data
     ports:
-      - "8093:8090"
+      - "8092:8090"
     depends_on:
       - node1
     command: ["-join-to", "node1:8090"]

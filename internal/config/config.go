@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"kvstore/internal/core"
 	"kvstore/internal/grpc/servers"
@@ -67,7 +66,7 @@ func Read() (*Config, error) {
 	c.choose(&c.Password, password)
 	c.choose(&c.RaftConfig.Advertise, advertise) //todo move this field to root of the config
 
-	c.RaftConfig.NodeID = uuid.NewString()
+	c.RaftConfig.NodeID = c.RaftConfig.Advertise
 
 	if c.RaftConfig.Advertise == "" {
 		c.RaftConfig.Advertise = c.address("localhost", c.InternalPort)

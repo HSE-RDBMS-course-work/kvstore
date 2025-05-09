@@ -1,5 +1,8 @@
 .PHONY: single single-clean three-tmux three-tmux-clean three-docker three-docker-clean clean
 
+include .env
+export
+
 CONFIG := config.yaml
 MAIN := cmd/main.go
 

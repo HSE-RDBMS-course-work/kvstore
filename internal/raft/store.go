@@ -12,8 +12,6 @@ import (
 	"time"
 )
 
-//todo перенаправлять запросы на лидера
-
 // Store make some key value storage distributed via raft
 type Store struct {
 	logger *slog.Logger

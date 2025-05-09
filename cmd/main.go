@@ -16,10 +16,7 @@ import (
 	"os/signal"
 )
 
-//https://github.com/otoolep/hraftd
-
-//todo авторизация, healthcheck,
-// рефактор raft.New todo передавать таймаут для выборов и перемиеновать raft.Timeout
+// рефактор raft.New todo передавать таймаут для выборов итд
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -57,7 +54,7 @@ func main() {
 
 	hcLogger := hclog.New(conf.HashicorpLogger())
 
-	r, recovered, err := raft.New(logger, hcLogger, fsm, conf.Raft()) //todo в конфиге какие то значение дефолтные в config. какие видмо в конструкторе (SnapshotsRetain сделать где то дефолтное значение) возможно изавитьяс от дефолтных значений во флагах
+	r, recovered, err := raft.New(logger, hcLogger, fsm, conf.Raft())
 	if err != nil {
 		cl.Error("cannot create raft instance", sl.Error(err))
 		return

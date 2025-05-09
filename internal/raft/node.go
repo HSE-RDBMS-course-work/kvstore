@@ -19,20 +19,20 @@ type existLeader interface {
 }
 
 type ClusterNodeConfig struct {
-	ID                ServerID
-	RealAddress       ServerAddress
-	AdvertisedAddress ServerAddress
-	BootstrapCluster  bool
+	ID               ServerID
+	RealAddress      ServerAddress
+	Advertise        ServerAddress
+	BootstrapCluster bool
 }
 
 type ClusterNode struct {
-	logger            *slog.Logger
-	raft              *raft.Raft
-	existLeader       existLeader
-	id                ServerID
-	realAddress       ServerAddress
-	advertisedAddress ServerAddress
-	isFirstNode       bool
+	logger      *slog.Logger
+	raft        *raft.Raft
+	existLeader existLeader
+	id          ServerID
+	realAddress ServerAddress
+	advertise   ServerAddress
+	isFirstNode bool
 }
 
 func NewClusterNode(logger *slog.Logger, r *raft.Raft, existLeader existLeader, conf ClusterNodeConfig) (*ClusterNode, error) {
@@ -54,7 +54,7 @@ func NewClusterNode(logger *slog.Logger, r *raft.Raft, existLeader existLeader, 
 	if conf.RealAddress == "" {
 		return nil, errors.New("real address required")
 	}
-	if conf.AdvertisedAddress == "" {
+	if conf.Advertise == "" {
 		return nil, errors.New("advertised address required")
 	}
 	if conf.ID == "" {
@@ -64,18 +64,18 @@ func NewClusterNode(logger *slog.Logger, r *raft.Raft, existLeader existLeader, 
 	logger.Debug("created successfully", sl.Conf(conf))
 
 	return &ClusterNode{
-		logger:            logger,
-		raft:              r,
-		existLeader:       existLeader,
-		id:                conf.ID,
-		realAddress:       conf.RealAddress,
-		advertisedAddress: conf.AdvertisedAddress,
-		isFirstNode:       conf.BootstrapCluster,
+		logger:      logger,
+		raft:        r,
+		existLeader: existLeader,
+		id:          conf.ID,
+		realAddress: conf.RealAddress,
+		advertise:   conf.Advertise,
+		isFirstNode: conf.BootstrapCluster,
 	}, nil
 }
 
 func (r *ClusterNode) AcceptJoin(ctx context.Context, in JoinToClusterIn) error {
-	if r.raft.State() != raft.Leader { //todo redirect it to real Leader
+	if r.raft.State() != raft.Leader {
 		return newErrorIsNotLeader(r.raft)
 	}
 
@@ -118,7 +118,7 @@ func (r *ClusterNode) bootstrapCluster(ctx context.Context) error {
 		Servers: []raft.Server{
 			{
 				ID:      r.id,
-				Address: r.advertisedAddress,
+				Address: r.advertise,
 			},
 		},
 	})
@@ -134,7 +134,7 @@ func (r *ClusterNode) bootstrapCluster(ctx context.Context) error {
 func (r *ClusterNode) joinToCluster(ctx context.Context) error {
 	err := r.existLeader.JoinToCluster(ctx, JoinToClusterIn{
 		JoinerID:      r.id,
-		JoinerAddress: r.advertisedAddress,
+		JoinerAddress: r.advertise,
 	})
 	if err != nil {
 		return fmt.Errorf("cannot join to cluster: %w", err)

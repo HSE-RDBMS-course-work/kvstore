@@ -19,7 +19,7 @@ type Config struct {
 	DataLocation      string
 	SnapshotsRetain   int
 	MaxPool           int
-	Timeout           time.Duration
+	TCPTimeout        time.Duration
 }
 
 func New(logger *slog.Logger, hcLogger hclog.Logger, fsm raft.FSM, conf Config) (*raft.Raft, bool, error) {
@@ -50,7 +50,7 @@ func New(logger *slog.Logger, hcLogger hclog.Logger, fsm raft.FSM, conf Config) 
 		return nil, false, fmt.Errorf("cannot resolve advertised address: %v", err)
 	}
 
-	transport, err := raft.NewTCPTransportWithLogger(conf.RealAddress, advertisedAddr, conf.MaxPool, conf.Timeout, hcLogger)
+	transport, err := raft.NewTCPTransportWithLogger(conf.RealAddress, advertisedAddr, conf.MaxPool, conf.TCPTimeout, hcLogger)
 	if err != nil {
 		return nil, false, fmt.Errorf("cannot create transport: %v", err)
 	}

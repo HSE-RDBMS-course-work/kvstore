@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
-	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 	"kvstore/internal/core"
 	"kvstore/internal/grpc/clients"
 	"kvstore/internal/grpc/servers"
@@ -16,53 +16,49 @@ import (
 	"time"
 )
 
-const timeFormat = "2006-01-02 15:04:05"
-
 type Config struct {
-	Host             string     `mapstructure:"host"`
-	PublicPort       string     `mapstructure:"public_port"`
-	InternalPort     string     `mapstructure:"internal_port"`
-	Username         string     `mapstructure:"username"`
-	Password         string     `mapstructure:"password"`
-	DataPath         string     `mapstructure:"data_path"`
-	LoggerConfig     Logger     `mapstructure:"logger"`
-	StoreConfig      Store      `mapstructure:"storage"`
-	GRPCServerConfig GRPCServer `mapstructure:"grpc_server"`
-	RaftConfig       Raft       `mapstructure:"raft"`
+	Host             string     `yaml:"host"`
+	PublicPort       string     `yaml:"public_port"`
+	InternalPort     string     `yaml:"internal_port"`
+	Advertise        string     `yaml:"advertise"`
+	Username         string     `yaml:"username"`
+	Password         string     `yaml:"password"`
+	DataPath         string     `yaml:"data_path"`
+	LoggerConfig     Logger     `yaml:"logger"`
+	StoreConfig      Store      `yaml:"storage"`
+	GRPCServerConfig GRPCServer `yaml:"grpc_server"`
+	RaftConfig       Raft       `yaml:"raft"`
 }
 
 type Logger struct {
-	Level int `mapstructure:"level"`
+	Level int `yaml:"level"`
 }
 
 type Store struct {
-	CleanInterval    time.Duration `mapstructure:"clean_interval"`
-	MaxCleanDuration time.Duration `mapstructure:"clean_duration"`
-	InitialCapacity  int64         `mapstructure:"initial_capacity"`
+	CleanInterval    time.Duration `yaml:"clean_interval"`
+	MaxCleanDuration time.Duration `yaml:"clean_duration"`
+	InitialCapacity  int64         `yaml:"initial_capacity"`
 }
 
 type GRPCServer struct {
-	ConnectionTimeout time.Duration `mapstructure:"connection_timeout"`
+	ConnectionTimeout time.Duration `yaml:"connection_timeout"`
 }
 
 type Raft struct {
-	Advertise       string        `mapstructure:"advertise"`
-	NodeID          string        `mapstructure:"-"`
-	Timeout         time.Duration `mapstructure:"timeout"`
-	MaxPool         int           `mapstructure:"max_pool"`
-	SnapshotsRetain int           `mapstructure:"snapshots_retain"`
+	NodeID          string        `yaml:"-"`
+	TCPTimeout      time.Duration `yaml:"tcp_timeout"`
+	MaxPool         int           `yaml:"max_pool"`
+	SnapshotsRetain int           `yaml:"snapshots_retain"`
 }
 
 func Read() (*Config, error) {
-	vp := viper.New()
-
-	vp.SetConfigFile(*configPath)
-	if err := vp.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("cannot read config file (%s): %w", *configPath, err)
+	file, err := os.Open(*configPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open config file: %w", err)
 	}
 
 	var c Config
-	if err := vp.Unmarshal(&c); err != nil {
+	if err := yaml.NewDecoder(file).Decode(&c); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal config from file: %w", err)
 	}
 
@@ -76,13 +72,13 @@ func Read() (*Config, error) {
 	c.choose(&c.InternalPort, iPort)
 	c.choose(&c.Username, username)
 	c.choose(&c.Password, password)
-	c.choose(&c.RaftConfig.Advertise, advertise) //todo move this field to root of the config
+	c.choose(&c.Advertise, advertise)
 
-	if c.RaftConfig.Advertise == "" {
-		c.RaftConfig.Advertise = c.address("localhost", c.InternalPort)
+	if c.Advertise == "" {
+		c.Advertise = c.address("localhost", c.InternalPort)
 	}
 
-	c.RaftConfig.NodeID = c.RaftConfig.Advertise
+	c.RaftConfig.NodeID = c.Advertise //todo it is bad
 
 	return &c, nil
 }
@@ -96,7 +92,8 @@ func (c *Config) Logger() *slog.HandlerOptions {
 	return &slog.HandlerOptions{
 		AddSource: false,
 		Level:     level,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr { //todo костыль чтобы slog был как hlog в идеалье реализовать hlog через slog
+		//todo костыль чтобы slog был как hclog в идеалье реализовать hlog.Logger через slog
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			switch a.Key {
 			case slog.TimeKey:
 				return slog.Attr{Key: "@timestamp", Value: a.Value}
@@ -155,21 +152,21 @@ func (c *Config) ExistingRaftClient() clients.RaftClientConfig {
 func (c *Config) Raft() raft.Config {
 	return raft.Config{
 		RealAddress:       c.address(c.Host, c.InternalPort),
-		AdvertisedAddress: c.RaftConfig.Advertise,
+		AdvertisedAddress: c.Advertise,
 		NodeID:            c.RaftConfig.NodeID,
 		DataLocation:      c.DataPath,
 		SnapshotsRetain:   c.RaftConfig.SnapshotsRetain,
 		MaxPool:           c.RaftConfig.MaxPool,
-		Timeout:           c.RaftConfig.Timeout,
+		TCPTimeout:        c.RaftConfig.TCPTimeout,
 	}
 }
 
 func (c *Config) ClusterNode() raft.ClusterNodeConfig {
 	return raft.ClusterNodeConfig{
-		ID:                raft.ServerID(c.RaftConfig.NodeID),
-		RealAddress:       raft.ServerAddress(c.address(c.Host, c.InternalPort)),
-		AdvertisedAddress: raft.ServerAddress(c.RaftConfig.Advertise),
-		BootstrapCluster:  *joinTo == "",
+		ID:               raft.ServerID(c.RaftConfig.NodeID),
+		RealAddress:      raft.ServerAddress(c.address(c.Host, c.InternalPort)),
+		Advertise:        raft.ServerAddress(c.Advertise),
+		BootstrapCluster: *joinTo == "",
 	}
 }
 

@@ -1,6 +1,7 @@
 host: ${KVSTORE_HOST}
 public_port: ${KVSTORE_PUBLIC_PORT}
 internal_port: ${KVSTORE_INTERNAL_PORT}
+advertise: ${KVSTORE_ADVERTISED_ADDRESS}
 username: ${KVSTORE_USERNAME}
 password: ${KVSTORE_PASSWORD}
 data_path: ${KVSTORE_DATA}
@@ -13,7 +14,6 @@ storage:
 grpc_server:
   connection_timeout: 5s
 raft:
-  advertise: ${KVSTORE_ADVERTISED_ADDRESS}
   timeout: 5s
   max_pool: 3
   snapshots_retain: 2

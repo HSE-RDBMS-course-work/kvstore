@@ -6,8 +6,8 @@ services:
       KVSTORE_HOST: 0.0.0.0
       KVSTORE_PUBLIC_PORT: 8090
       KVSTORE_INTERNAL_PORT: 3000
-      KVSTORE_USERNAME: admin
-      KVSTORE_PASSWORD: password
+      KVSTORE_USERNAME: ${KVSTORE_USERNAME}
+      KVSTORE_PASSWORD: ${KVSTORE_PASSWORD}
       KVSTORE_ADVERTISED_ADDRESS: node1:3000
     volumes:
       - node1_data:/home/appuser/data
@@ -28,8 +28,8 @@ services:
       KVSTORE_HOST: 0.0.0.0
       KVSTORE_PUBLIC_PORT: 8090
       KVSTORE_INTERNAL_PORT: 3000
-      KVSTORE_USERNAME: admin
-      KVSTORE_PASSWORD: password
+      KVSTORE_USERNAME: ${KVSTORE_USERNAME}
+      KVSTORE_PASSWORD: ${KVSTORE_PASSWORD}
       KVSTORE_ADVERTISED_ADDRESS: node2:3000
     volumes:
       - node2_data:/home/appuser/data
@@ -53,8 +53,8 @@ services:
       KVSTORE_HOST: 0.0.0.0
       KVSTORE_PUBLIC_PORT: 8090
       KVSTORE_INTERNAL_PORT: 3000
-      KVSTORE_USERNAME: admin
-      KVSTORE_PASSWORD: password
+      KVSTORE_USERNAME: ${KVSTORE_USERNAME}
+      KVSTORE_PASSWORD: ${KVSTORE_PASSWORD}
       KVSTORE_ADVERTISED_ADDRESS: node3:3000
     volumes:
       - node3_data:/home/appuser/data

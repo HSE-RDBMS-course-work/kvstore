@@ -1,4 +1,4 @@
-.PHONY: single single-clean three
+.PHONY: single single-clean three-tmux three-tmux-clean three-docker three-docker-clean clean
 
 CONFIG := config.yaml
 MAIN := cmd/main.go
@@ -53,3 +53,8 @@ clean:
 	@make single-clean
 	@make three-tmux-clean
 	@make three-docker-clean
+
+#todo ci
+push-image:
+	@docker build -t ghcr.io/hse-rdbms-course-work/kvstore:latest --push .
+

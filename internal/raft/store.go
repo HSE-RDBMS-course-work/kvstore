@@ -50,7 +50,7 @@ func (s *Store) Get(ctx context.Context, key core.Key) (*core.Value, error) {
 
 func (s *Store) ConsistentGet(ctx context.Context, key core.Key) (*core.Value, error) {
 	if s.raft.State() != raft.Leader {
-		return nil, ErrIsNotLeader
+		return nil, newErrorIsNotLeader(s.raft)
 	}
 
 	return s.store.Get(ctx, key)
@@ -58,7 +58,7 @@ func (s *Store) ConsistentGet(ctx context.Context, key core.Key) (*core.Value, e
 
 func (s *Store) Put(ctx context.Context, key core.Key, value core.Value, ttl time.Duration) error {
 	if s.raft.State() != raft.Leader {
-		return ErrIsNotLeader
+		return newErrorIsNotLeader(s.raft)
 	}
 
 	if err := s.store.Put(ctx, key, value, ttl); err != nil {
@@ -77,7 +77,7 @@ func (s *Store) Put(ctx context.Context, key core.Key, value core.Value, ttl tim
 
 func (s *Store) Delete(ctx context.Context, key core.Key) error {
 	if s.raft.VerifyLeader().Error() != nil {
-		return ErrIsNotLeader
+		return newErrorIsNotLeader(s.raft)
 	}
 
 	if err := s.store.Delete(ctx, key); err != nil {

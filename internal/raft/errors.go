@@ -2,6 +2,8 @@ package raft
 
 import (
 	"errors"
+	"fmt"
+	"github.com/hashicorp/raft"
 )
 
 var (
@@ -14,15 +16,17 @@ type ErrorIsNotLeader struct {
 	leaderAddress string
 }
 
-func newErrorIsNotLeader(leaderAddress string) *ErrorIsNotLeader {
+func newErrorIsNotLeader(r *raft.Raft) *ErrorIsNotLeader {
+	_, leaderPublicAddress := r.LeaderWithID()
+
 	return &ErrorIsNotLeader{
 		err:           ErrIsNotLeader,
-		leaderAddress: leaderAddress,
+		leaderAddress: string(leaderPublicAddress),
 	}
 }
 
 func (e *ErrorIsNotLeader) Error() string {
-	return e.err.Error()
+	return fmt.Sprintf("leader=%s, this node is not a leader", e.Leader())
 }
 
 func (e *ErrorIsNotLeader) Unwrap() error {

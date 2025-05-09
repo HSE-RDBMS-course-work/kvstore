@@ -24,20 +24,22 @@ RUN go build -ldflags="-s -w" -o /usr/local/bin/grpc-health-probe main.go
 
 FROM alpine AS runner
 
-RUN addgroup -S appgroup \
-    && adduser -S appuser -G appgroup
+LABEL stage=runner
 
-USER appuser
+RUN addgroup -S kvstore \
+    && adduser -S kvstore -G kvstore
 
-WORKDIR /home/appuser/
+USER kvstore
+
+WORKDIR /home/kvuser/
 
 COPY --from=builder /app/app app
 COPY --from=builder /app/config.yaml config.yaml
 COPY --from=builder /usr/local/bin/grpc-health-probe /usr/local/bin/grpc-health-probe
 
-RUN mkdir -p /home/appuser/data \
-    && chown -R appuser:appgroup /home/appuser/data
+RUN mkdir -p /home/kvstore/data \
+    && chown -R kvstore:kvstore /home/kvstore/data
 
-ENV KVSTORE_DATA=/home/appuser/data
+ENV KVSTORE_DATA=/home/kvstore/data
 
-ENTRYPOINT ["./app", "-config", "/home/appuser/config.yaml"]
+ENTRYPOINT ["./app", "-config", "config.yaml"]

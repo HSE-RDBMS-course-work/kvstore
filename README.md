@@ -33,7 +33,7 @@ services:
       KVSTORE_PASSWORD: password
       KVSTORE_ADVERTISED_ADDRESS: node1:3000
     volumes:
-      - node1_data:/home/appuser/data
+      - node1_data:/home/kvstore/data
     ports:
       - "8090:8090"
     healthcheck:
@@ -54,7 +54,7 @@ services:
       KVSTORE_PASSWORD: password
       KVSTORE_ADVERTISED_ADDRESS: node2:3000
     volumes:
-      - node2_data:/home/appuser/data
+      - node2_data:/home/kvstore/data
     ports:
       - "8091:8090"
     depends_on:
@@ -79,7 +79,7 @@ services:
       KVSTORE_PASSWORD: password
       KVSTORE_ADVERTISED_ADDRESS: node3:3000
     volumes:
-      - node3_data:/home/appuser/data
+      - node3_data:/home/kvstore/data
     ports:
       - "8092:8090"
     depends_on:

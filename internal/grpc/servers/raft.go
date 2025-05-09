@@ -38,9 +38,6 @@ func (s *RaftServer) JoinToCluster(ctx context.Context, in *pb.JoinIn) (*pb.Join
 		JoinerID:      raft.ServerID(in.JoinerId),
 		JoinerAddress: raft.ServerAddress(in.JoinerAddress),
 	})
-	if errors.Is(err, raft.ErrNodeExist) {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
 	if errors.Is(err, raft.ErrIsNotLeader) {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

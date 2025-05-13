@@ -59,18 +59,12 @@ func (s *Store) Put(ctx context.Context, key core.Key, value core.Value, ttl tim
 		return newErrorIsNotLeader(s.raft)
 	}
 
-	if err := s.store.Put(ctx, key, value, ttl); err != nil {
-		return err
-	}
-
-	cmd := command{
+	return s.apply(ctx, command{
 		Op:    opPut,
 		Key:   key,
 		Value: value,
 		TTL:   ttl,
-	}
-
-	return s.apply(ctx, cmd)
+	})
 }
 
 func (s *Store) Delete(ctx context.Context, key core.Key) error {
@@ -78,16 +72,32 @@ func (s *Store) Delete(ctx context.Context, key core.Key) error {
 		return newErrorIsNotLeader(s.raft)
 	}
 
-	if err := s.store.Delete(ctx, key); err != nil {
-		return err
-	}
-
-	cmd := command{
+	return s.apply(ctx, command{
 		Op:  opDelete,
 		Key: key,
-	}
+	})
+}
 
-	return s.apply(ctx, cmd)
+func (s *Store) RunCleaning(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case isLeader, ok := <-s.raft.LeaderCh():
+			if !ok {
+				return errors.New("raft leader channel closed")
+			}
+			if !isLeader {
+				continue
+			}
+		}
+
+		for key := range s.store.Expired(ctx) {
+			if err := s.Delete(ctx, key); err != nil {
+				s.logger.Warn("failed to delete expired key")
+			}
+		}
+	}
 }
 
 func (s *Store) apply(ctx context.Context, cmd command) error {
@@ -111,21 +121,4 @@ func (s *Store) apply(ctx context.Context, cmd command) error {
 	s.logger.Debug("applied command", cmd.LogAttr())
 
 	return nil
-}
-
-func (s *Store) RunCleaning(ctx context.Context) {
-	for {
-		if !<-s.raft.LeaderCh() {
-			continue
-		}
-
-		for key := range s.store.Expired(ctx) {
-			if s.raft.State() != raft.Leader {
-				break
-			}
-			if err := s.Delete(ctx, key); err != nil {
-				s.logger.Warn("failed to delete expired key")
-			}
-		}
-	}
 }

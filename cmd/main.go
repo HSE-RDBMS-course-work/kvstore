@@ -110,7 +110,10 @@ func main() {
 	}()
 
 	go func() {
-		distributedStore.RunCleaning(ctx)
+		if err := distributedStore.RunCleaning(ctx); err != nil {
+			cl.Error("cannot start cleaning store", sl.Error(err))
+			stop()
+		}
 	}()
 
 	<-ctx.Done()

@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HSE-RDBMS-course-work/kvstore)
+
 # kvstore
 
 Распределённое ключ-значение хранилище,

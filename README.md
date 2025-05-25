@@ -12,9 +12,9 @@
 
 ```bash
 docker run -d \
-  -e KVSTORE_USERNAME=admin \
-  -e KVSTORE_PASSWORD=password \
-  -p 8090:8090 \
+  -username KVSTORE_USERNAME=admin \
+  -password KVSTORE_PASSWORD=password \
+  -port 8090:8090 \
   ghcr.io/hse-rdbms-course-work/kvstore:latest
 ```
 

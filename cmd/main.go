@@ -4,14 +4,18 @@ import (
 	"context"
 	"errors"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/go-metrics/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"kvstore/internal/config"
-	core "kvstore/internal/core"
+	"kvstore/internal/core"
 	"kvstore/internal/grpc/clients"
 	"kvstore/internal/grpc/servers"
 	"kvstore/internal/raft"
 	"kvstore/internal/sl"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 )
@@ -95,6 +99,21 @@ func main() {
 	healthServer := servers.NewHealthServer()
 	healthServer.RegisterTo(srv.Server)
 
+	promSink, err := prometheus.NewPrometheusSink()
+	if err != nil {
+		cl.Error("cannot create prometheus sink", sl.Error(err))
+		return
+	}
+
+	_, err = metrics.NewGlobal(
+		metrics.DefaultConfig(conf.Raft().AdvertisedAddress),
+		promSink,
+	)
+	if err != nil {
+		cl.Error("cannot create metrics instance", sl.Error(err))
+		return
+	}
+
 	go func() {
 		if err := clusterNode.Run(ctx, recovered); err != nil {
 			cl.Error("cannot start cluster node", sl.Error(err))
@@ -114,6 +133,11 @@ func main() {
 			cl.Error("cannot start cleaning store", sl.Error(err))
 			stop()
 		}
+	}()
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(":9090", nil))
 	}()
 
 	<-ctx.Done()
